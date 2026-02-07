@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - Metro Services</title>
+    <style>
+        body { font-family: Georgia, serif; margin: 20px; color: #1a1a1a; background: #efefef; }
+        .container { max-width: 900px; margin: 0 auto; border: 3px solid #8b0000; padding: 30px; background: white; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 30px; background: #f5f5f5; padding: 20px; border-left: 5px solid #8b0000; }
+        .company-info h1 { margin: 0; color: #8b0000; font-size: 24px; }
+        .company-info p { margin: 4px 0; font-size: 12px; }
+        .invoice-details { text-align: right; }
+        .invoice-number { font-size: 18px; font-weight: bold; color: #8b0000; }
+        .section { margin: 20px 0; }
+        .section-title { font-weight: bold; margin-bottom: 8px; font-size: 13px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background-color: #8b0000; color: white; border: 1px solid #666; padding: 12px; text-align: left; font-weight: bold; }
+        td { border: 1px solid #ccc; padding: 10px; }
+        .amount { text-align: right; }
+        .totals { margin-top: 20px; width: 280px; margin-left: auto; }
+        .totals-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #999; }
+        .totals-row.total { font-weight: bold; font-size: 15px; border-bottom: 3px solid #8b0000; padding: 10px 0; }
+        .footer { margin-top: 20px; font-size: 11px; color: #555; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="company-info">
+                <h1>METRO SERVICES</h1>
+                <p>Medical Equipment & Maintenance</p>
+                <p>234 Commerce Street</p>
+                <p>Houston, TX 77001</p>
+            </div>
+            <div class="invoice-details">
+                <div class="invoice-number">Invoice #MS-24-0089</div>
+                <p>Date: June 10, 2024</p>
+                <p>Due Date: July 10, 2024</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Billed To:</div>
+            <p>Riverside Medical Center<br>2000 Mercy Drive<br>Phoenix, AZ 85001</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Service Description</th>
+                    <th>Qty</th>
+                    <th>Rate</th>
+                    <th class="amount">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Equipment Maintenance Visit (4 hrs)</td>
+                    <td>2</td>
+                    <td>$125.00</td>
+                    <td class="amount">$250.00</td>
+                </tr>
+                <tr>
+                    <td>X-Ray Machine Calibration</td>
+                    <td>1</td>
+                    <td>$350.00</td>
+                    <td class="amount">$350.00</td>
+                </tr>
+                <tr>
+                    <td>Repair Parts - Ventilator Components</td>
+                    <td>1</td>
+                    <td>$425.00</td>
+                    <td class="amount">$425.00</td>
+                </tr>
+                <tr>
+                    <td>Emergency Service Call (after hours)</td>
+                    <td>1</td>
+                    <td>$200.00</td>
+                    <td class="amount">$200.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row">
+                <span>Subtotal:</span>
+                <span>$1,225.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Tax (8.5%):</span>
+                <span>$104.13</span>
+            </div>
+            <div class="totals-row total">
+                <span>AMOUNT DUE:</span>
+                <span>$1,329.13</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Contact for payment: Metro Services | Phone: (713) 555-0003 | Email: billing@metroservices.com</p>
+        </div>
+    </div>
+</body>
+</html>

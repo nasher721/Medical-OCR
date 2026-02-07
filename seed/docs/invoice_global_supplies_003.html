@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - Global Supplies Inc</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 15px; color: #2c3e50; }
+        .container { max-width: 900px; margin: 0 auto; border: 2px solid #16a085; padding: 25px; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 25px; border-bottom: 2px solid #16a085; padding-bottom: 20px; }
+        .company-info h1 { margin: 0; color: #16a085; font-size: 26px; }
+        .company-info p { margin: 4px 0; font-size: 13px; }
+        .invoice-details { text-align: right; }
+        .invoice-number { font-size: 18px; font-weight: bold; color: #16a085; }
+        .section { margin: 18px 0; }
+        .section-title { font-weight: bold; margin-bottom: 8px; color: #16a085; }
+        table { width: 100%; border-collapse: collapse; margin: 18px 0; }
+        th { background-color: #d5f4e6; border: 1px solid #16a085; padding: 10px; text-align: left; font-weight: bold; }
+        td { border: 1px solid #bdc3c7; padding: 9px; }
+        .amount { text-align: right; }
+        .totals { margin-top: 20px; width: 300px; margin-left: auto; }
+        .totals-row { display: flex; justify-content: space-between; padding: 7px 0; }
+        .totals-row.total { font-weight: bold; font-size: 15px; border-top: 2px solid #16a085; border-bottom: 2px solid #16a085; padding: 10px 0; }
+        .footer { margin-top: 25px; font-size: 11px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="company-info">
+                <h1>Global Supplies Inc</h1>
+                <p>456 Distribution Way</p>
+                <p>Chicago, IL 60601</p>
+                <p>Phone: (312) 555-0002</p>
+            </div>
+            <div class="invoice-details">
+                <div class="invoice-number">INV-GSI-2024-3378</div>
+                <p><strong>Date:</strong> May 22, 2024</p>
+                <p><strong>Due Date:</strong> June 22, 2024</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Ship To:</div>
+            <p>Westside Medical Group<br>750 Oak Street<br>Seattle, WA 98101</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Description</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th class="amount">Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Latex Examination Gloves (Box of 200)</td>
+                    <td>30</td>
+                    <td>$6.50</td>
+                    <td class="amount">$195.00</td>
+                </tr>
+                <tr>
+                    <td>N95 Respiratory Masks (Box of 50)</td>
+                    <td>25</td>
+                    <td>$22.00</td>
+                    <td class="amount">$550.00</td>
+                </tr>
+                <tr>
+                    <td>Alcohol Hand Sanitizer (1 Gallon)</td>
+                    <td>15</td>
+                    <td>$18.50</td>
+                    <td class="amount">$277.50</td>
+                </tr>
+                <tr>
+                    <td>Medical Face Shields</td>
+                    <td>200</td>
+                    <td>$3.25</td>
+                    <td class="amount">$650.00</td>
+                </tr>
+                <tr>
+                    <td>Surgical Gowns (Reinforced)</td>
+                    <td>100</td>
+                    <td>$5.75</td>
+                    <td class="amount">$575.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row">
+                <span>Subtotal:</span>
+                <span>$2,247.50</span>
+            </div>
+            <div class="totals-row">
+                <span>Shipping:</span>
+                <span>$125.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Tax (7%):</span>
+                <span>$163.98</span>
+            </div>
+            <div class="totals-row total">
+                <span>TOTAL AMOUNT DUE:</span>
+                <span>$2,536.48</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Payment terms: Net 30 from invoice date. Please make checks payable to Global Supplies Inc. Account #GS-2024-3378</p>
+        </div>
+    </div>
+</body>
+</html>

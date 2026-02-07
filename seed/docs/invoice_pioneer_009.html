@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - Pioneer Healthcare Solutions</title>
+    <style>
+        body { font-family: 'PT Sans', sans-serif; margin: 20px; color: #222; }
+        .container { max-width: 900px; margin: 0 auto; border: 1px solid #999; padding: 30px; background: white; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #c41e3a; }
+        .company-info h1 { margin: 0; color: #c41e3a; font-size: 26px; }
+        .company-info p { margin: 3px 0; font-size: 12px; }
+        .invoice-details { text-align: right; }
+        .invoice-details p { margin: 3px 0; font-size: 12px; }
+        .invoice-number { font-size: 18px; font-weight: bold; color: #c41e3a; margin-bottom: 8px; }
+        .section { margin: 18px 0; }
+        .section-title { font-weight: bold; margin-bottom: 8px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background-color: #f0f0f0; border: 1px solid #999; padding: 12px; text-align: left; font-weight: bold; border-bottom: 2px solid #c41e3a; }
+        td { border: 1px solid #ddd; padding: 10px; }
+        .amount { text-align: right; }
+        .totals { margin-top: 20px; width: 300px; margin-left: auto; }
+        .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ddd; }
+        .totals-row.total { font-weight: bold; font-size: 15px; border-top: 2px solid #c41e3a; border-bottom: 2px solid #c41e3a; padding: 10px 0; background: #f5f5f5; }
+        .footer { margin-top: 25px; font-size: 11px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="company-info">
+                <h1>Pioneer Healthcare Solutions</h1>
+                <p>Medical Supplies & Distribution</p>
+                <p>789 Gateway Drive</p>
+                <p>Miami, FL 33101</p>
+            </div>
+            <div class="invoice-details">
+                <div class="invoice-number">INV #PHS-24-2847</div>
+                <p>Date: November 20, 2024</p>
+                <p>Due: December 20, 2024</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">CUSTOMER DETAILS:</div>
+            <p>North Beach Medical Center<br>1800 Collins Avenue<br>Miami Beach, FL 33139</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th class="amount">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>IV Infusion Pumps (Programmable)</td>
+                    <td>4</td>
+                    <td>$1,350.00</td>
+                    <td class="amount">$5,400.00</td>
+                </tr>
+                <tr>
+                    <td>Saline Solution (1L Bags)</td>
+                    <td>200</td>
+                    <td>$3.75</td>
+                    <td class="amount">$750.00</td>
+                </tr>
+                <tr>
+                    <td>Insulin Syringes (Box of 100)</td>
+                    <td>60</td>
+                    <td>$12.00</td>
+                    <td class="amount">$720.00</td>
+                </tr>
+                <tr>
+                    <td>Oxygen Delivery Systems</td>
+                    <td>6</td>
+                    <td>$450.00</td>
+                    <td class="amount">$2,700.00</td>
+                </tr>
+                <tr>
+                    <td>Patient Monitoring Systems</td>
+                    <td>2</td>
+                    <td>$1,800.00</td>
+                    <td class="amount">$3,600.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row">
+                <span>Subtotal:</span>
+                <span>$13,170.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Delivery Fee:</span>
+                <span>$150.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Tax (7%):</span>
+                <span>$932.40</span>
+            </div>
+            <div class="totals-row total">
+                <span>TOTAL AMOUNT DUE:</span>
+                <span>$14,252.40</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Payment Terms: Net 30. Contact: Pioneer Healthcare Solutions | Phone: (305) 555-0006 | Fax: (305) 555-0007</p>
+        </div>
+    </div>
+</body>
+</html>
