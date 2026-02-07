@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - CloudNet Systems</title>
+    <style>
+        body { font-family: 'Trebuchet MS', sans-serif; margin: 20px; color: #222; }
+        .container { max-width: 900px; margin: 0 auto; border: 1px solid #ddd; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 3px solid #1e90ff; padding-bottom: 20px; }
+        .company-info h1 { margin: 0; color: #1e90ff; font-size: 26px; letter-spacing: 1px; }
+        .company-info p { margin: 3px 0; font-size: 13px; }
+        .invoice-details { text-align: right; }
+        .invoice-details p { margin: 3px 0; font-size: 13px; }
+        .invoice-number { font-size: 19px; font-weight: bold; color: #1e90ff; margin-bottom: 10px; }
+        .section { margin: 18px 0; }
+        .section-title { font-weight: bold; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; color: #1e90ff; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background-color: #e0f0ff; border-bottom: 2px solid #1e90ff; padding: 12px; text-align: left; font-weight: bold; color: #333; }
+        td { border-bottom: 1px solid #eee; padding: 10px; }
+        .amount { text-align: right; font-family: 'Courier New', monospace; }
+        .totals { margin-top: 20px; width: 320px; margin-left: auto; }
+        .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .totals-row.total { font-weight: bold; font-size: 16px; background: #e0f0ff; border: 2px solid #1e90ff; padding: 12px; margin-top: 5px; }
+        .footer { margin-top: 25px; font-size: 11px; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="company-info">
+                <h1>CloudNet Systems</h1>
+                <p>Healthcare IT Solutions</p>
+                <p>567 Tech Parkway</p>
+                <p>Denver, CO 80202</p>
+            </div>
+            <div class="invoice-details">
+                <div class="invoice-number">Invoice #CNS-2024-7845</div>
+                <p>Date: July 18, 2024</p>
+                <p>Due Date: August 18, 2024</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Customer:</div>
+            <p>Premier Care Network<br>3333 Health Boulevard<br>Denver, CO 80205</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Quantity</th>
+                    <th>Unit Cost</th>
+                    <th class="amount">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cloud Storage License (100GB/month)</td>
+                    <td>12</td>
+                    <td>$99.99</td>
+                    <td class="amount">$1,199.88</td>
+                </tr>
+                <tr>
+                    <td>Data Backup & Recovery Service</td>
+                    <td>12</td>
+                    <td>$149.99</td>
+                    <td class="amount">$1,799.88</td>
+                </tr>
+                <tr>
+                    <td>Security Monitoring (24/7)</td>
+                    <td>12</td>
+                    <td>$199.99</td>
+                    <td class="amount">$2,399.88</td>
+                </tr>
+                <tr>
+                    <td>Technical Support Incident (10)</td>
+                    <td>10</td>
+                    <td>$75.00</td>
+                    <td class="amount">$750.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row">
+                <span>Subtotal:</span>
+                <span>$6,149.64</span>
+            </div>
+            <div class="totals-row">
+                <span>Tax (6%):</span>
+                <span>$368.98</span>
+            </div>
+            <div class="totals-row total">
+                <span>TOTAL INVOICE:</span>
+                <span>$6,518.62</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Questions? Contact our billing department at billing@cloudnet.io | Support: support@cloudnet.io</p>
+        </div>
+    </div>
+</body>
+</html>

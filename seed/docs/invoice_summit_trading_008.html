@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - Summit Trading Group</title>
+    <style>
+        body { font-family: 'Open Sans', sans-serif; margin: 18px; color: #2c3e50; background: #ecf0f1; }
+        .container { max-width: 900px; margin: 0 auto; border: 2px solid #34495e; padding: 28px; background: white; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 3px solid #34495e; }
+        .company-info h1 { margin: 0; color: #34495e; font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+        .company-info p { margin: 3px 0; font-size: 13px; }
+        .invoice-details { text-align: right; }
+        .invoice-details p { margin: 3px 0; font-size: 13px; }
+        .invoice-number { font-size: 18px; font-weight: bold; color: #34495e; }
+        .section { margin: 17px 0; }
+        .section-title { font-weight: 600; margin-bottom: 8px; font-size: 12px; color: #34495e; }
+        table { width: 100%; border-collapse: collapse; margin: 19px 0; }
+        th { background-color: #ecf0f1; border: 1px solid #bdc3c7; padding: 11px; text-align: left; font-weight: 600; }
+        td { border: 1px solid #bdc3c7; padding: 9px; }
+        .amount { text-align: right; font-weight: 500; }
+        .totals { margin-top: 22px; width: 310px; margin-left: auto; }
+        .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #bdc3c7; }
+        .totals-row.total { font-weight: bold; font-size: 15px; background: #ecf0f1; border: 1px solid #34495e; padding: 11px; margin-top: 5px; }
+        .footer { margin-top: 25px; font-size: 11px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="company-info">
+                <h1>SUMMIT TRADING GROUP</h1>
+                <p>Medical & Laboratory Equipment</p>
+                <p>567 Commerce Lane</p>
+                <p>Atlanta, GA 30301</p>
+            </div>
+            <div class="invoice-details">
+                <div class="invoice-number">Invoice #STG-2024-8901</div>
+                <p>Date: October 3, 2024</p>
+                <p>Due Date: November 3, 2024</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">BILLING ADDRESS:</div>
+            <p>University Hospital Network<br>2200 Research Parkway<br>Atlanta, GA 30339</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Description</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th class="amount">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Automated Blood Analyzer System</td>
+                    <td>1</td>
+                    <td>$4,500.00</td>
+                    <td class="amount">$4,500.00</td>
+                </tr>
+                <tr>
+                    <td>Chemistry Reagent Kits (Monthly Supply)</td>
+                    <td>2</td>
+                    <td>$850.00</td>
+                    <td class="amount">$1,700.00</td>
+                </tr>
+                <tr>
+                    <td>Microscope Slides and Cover Glass (Box)</td>
+                    <td>50</td>
+                    <td>$15.50</td>
+                    <td class="amount">$775.00</td>
+                </tr>
+                <tr>
+                    <td>Laboratory Centrifuge Equipment</td>
+                    <td>2</td>
+                    <td>$1,200.00</td>
+                    <td class="amount">$2,400.00</td>
+                </tr>
+                <tr>
+                    <td>Equipment Training & Certification</td>
+                    <td>1</td>
+                    <td>$500.00</td>
+                    <td class="amount">$500.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row">
+                <span>Subtotal:</span>
+                <span>$9,875.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Shipping & Handling:</span>
+                <span>$225.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Tax (8.75%):</span>
+                <span>$885.63</span>
+            </div>
+            <div class="totals-row total">
+                <span>AMOUNT DUE:</span>
+                <span>$10,985.63</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Terms: Net 30 from invoice date. Questions? Call 404-555-0005 or email billing@summittrading.com. Reference invoice number with payment.</p>
+        </div>
+    </div>
+</body>
+</html>

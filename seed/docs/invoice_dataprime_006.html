@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - DataPrime Analytics</title>
+    <style>
+        body { font-family: 'Lucida Grande', sans-serif; margin: 18px; color: #333; background: #f8f8f8; }
+        .container { max-width: 900px; margin: 0 auto; border: 2px solid #2d6a4f; padding: 28px; background: white; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 28px; padding-bottom: 18px; border-bottom: 2px solid #2d6a4f; }
+        .company-info h1 { margin: 0; color: #2d6a4f; font-size: 27px; font-weight: 600; }
+        .company-info p { margin: 4px 0; font-size: 13px; line-height: 1.4; }
+        .invoice-details { text-align: right; }
+        .invoice-number { font-size: 17px; font-weight: bold; color: #2d6a4f; margin-bottom: 8px; }
+        .section { margin: 16px 0; }
+        .section-title { font-weight: bold; margin-bottom: 8px; color: #2d6a4f; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 18px 0; }
+        th { background-color: #c8e6c9; border: 1px solid #2d6a4f; padding: 11px; text-align: left; font-weight: 600; }
+        td { border: 1px solid #ddd; padding: 9px; }
+        .amount { text-align: right; }
+        .totals { margin-top: 20px; width: 300px; margin-left: auto; }
+        .totals-row { display: flex; justify-content: space-between; padding: 7px 0; }
+        .totals-row.total { font-weight: bold; font-size: 15px; border-top: 2px solid #2d6a4f; border-bottom: 2px solid #2d6a4f; padding: 10px 0; }
+        .footer { margin-top: 25px; font-size: 11px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="company-info">
+                <h1>DataPrime Analytics</h1>
+                <p>Healthcare Data Solutions</p>
+                <p>890 Analytics Drive</p>
+                <p>Austin, TX 78701</p>
+                <p>contact@dataprime.com</p>
+            </div>
+            <div class="invoice-details">
+                <div class="invoice-number">Invoice #DP-2024-4521</div>
+                <p>Date: August 5, 2024</p>
+                <p>Due: September 5, 2024</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">INVOICE FOR:</div>
+            <p>St. Luke's Healthcare System<br>1500 Main Street<br>Austin, TX 78704</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Service / Product</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th class="amount">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Patient Data Analytics Platform (Annual)</td>
+                    <td>1</td>
+                    <td>$3,500.00</td>
+                    <td class="amount">$3,500.00</td>
+                </tr>
+                <tr>
+                    <td>Real-time Reporting Dashboard</td>
+                    <td>1</td>
+                    <td>$1,200.00</td>
+                    <td class="amount">$1,200.00</td>
+                </tr>
+                <tr>
+                    <td>Custom Report Development (20 hrs)</td>
+                    <td>20</td>
+                    <td>$85.00</td>
+                    <td class="amount">$1,700.00</td>
+                </tr>
+                <tr>
+                    <td>Data Integration Services</td>
+                    <td>1</td>
+                    <td>$950.00</td>
+                    <td class="amount">$950.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row">
+                <span>Subtotal:</span>
+                <span>$7,350.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Discount (10%):</span>
+                <span>-$735.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Tax (8.5%):</span>
+                <span>$566.78</span>
+            </div>
+            <div class="totals-row total">
+                <span>TOTAL DUE:</span>
+                <span>$7,181.78</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Payment terms: Net 30. Make checks payable to DataPrime Analytics. Please reference invoice number in payment.</p>
+        </div>
+    </div>
+</body>
+</html>

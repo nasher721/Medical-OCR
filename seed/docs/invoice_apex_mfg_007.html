@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - Apex Manufacturing</title>
+    <style>
+        body { font-family: Calibri, sans-serif; margin: 20px; color: #1f4788; }
+        .container { max-width: 900px; margin: 0 auto; border: 1px solid #1f4788; padding: 30px; background: #fafafa; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #1f4788; }
+        .company-info h1 { margin: 0 0 5px 0; color: #1f4788; font-size: 28px; }
+        .company-info p { margin: 3px 0; font-size: 12px; }
+        .company-info .logo { color: #ff6b35; font-weight: bold; font-size: 11px; }
+        .invoice-details { text-align: right; }
+        .invoice-details p { margin: 4px 0; font-size: 12px; }
+        .invoice-number { font-size: 19px; font-weight: bold; color: #1f4788; }
+        .section { margin: 18px 0; }
+        .section-title { font-weight: bold; margin-bottom: 8px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background-color: #1f4788; color: white; border: 1px solid #1f4788; padding: 12px; text-align: left; font-weight: bold; }
+        td { border: 1px solid #ccc; padding: 9px; }
+        .amount { text-align: right; }
+        .totals { margin-top: 20px; width: 300px; margin-left: auto; }
+        .totals-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #ddd; }
+        .totals-row.total { font-weight: bold; font-size: 15px; border-bottom: 3px solid #1f4788; border-top: 2px solid #1f4788; padding: 10px 0; }
+        .footer { margin-top: 25px; font-size: 11px; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="company-info">
+                <h1>APEX Manufacturing</h1>
+                <p class="logo">Premium Medical Devices</p>
+                <p>345 Industrial Boulevard</p>
+                <p>Milwaukee, WI 53201</p>
+                <p>Tel: (414) 555-0004</p>
+            </div>
+            <div class="invoice-details">
+                <div class="invoice-number">Invoice #APX-2024-5634</div>
+                <p>Date: September 12, 2024</p>
+                <p>Due Date: October 12, 2024</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">SHIP TO:</div>
+            <p>General Hospital Consortium<br>5500 Parkside Avenue<br>Philadelphia, PA 19131</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Unit Cost</th>
+                    <th class="amount">Line Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Portable Ultrasound Machine (Model UX-500)</td>
+                    <td>3</td>
+                    <td>$2,800.00</td>
+                    <td class="amount">$8,400.00</td>
+                </tr>
+                <tr>
+                    <td>Cardiac Monitor Display Units</td>
+                    <td>8</td>
+                    <td>$950.00</td>
+                    <td class="amount">$7,600.00</td>
+                </tr>
+                <tr>
+                    <td>Patient Bed Side Rail Attachments</td>
+                    <td>20</td>
+                    <td>$250.00</td>
+                    <td class="amount">$5,000.00</td>
+                </tr>
+                <tr>
+                    <td>Installation & Setup Service</td>
+                    <td>1</td>
+                    <td>$1,500.00</td>
+                    <td class="amount">$1,500.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row">
+                <span>Subtotal:</span>
+                <span>$22,500.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Freight:</span>
+                <span>$350.00</span>
+            </div>
+            <div class="totals-row">
+                <span>Tax (7.5%):</span>
+                <span>$1,706.25</span>
+            </div>
+            <div class="totals-row total">
+                <span>TOTAL INVOICE:</span>
+                <span>$24,556.25</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Terms: Net 45. Payment address: Apex Manufacturing, P.O. Box 4456, Milwaukee, WI 53201. Account #APX-PHI-5634</p>
+        </div>
+    </div>
+</body>
+</html>
