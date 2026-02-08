@@ -157,6 +157,17 @@ export interface Integration {
   created_at: string;
 }
 
+export interface NotificationPreference {
+  id: string;
+  org_id: string;
+  user_id: string;
+  email: string;
+  document_approved: boolean;
+  needs_review: boolean;
+  workflow_error: boolean;
+  created_at: string;
+}
+
 export interface ApiKey {
   id: string;
   org_id: string;
@@ -214,6 +225,7 @@ export interface Database {
       workflow_runs: { Row: WorkflowRun; Insert: Partial<WorkflowRun> & { workflow_id: string }; Update: Partial<WorkflowRun> };
       workflow_logs: { Row: WorkflowLog; Insert: Partial<WorkflowLog> & { workflow_run_id: string; node_id: string }; Update: Partial<WorkflowLog> };
       integrations: { Row: Integration; Insert: Partial<Integration> & { org_id: string; type: string; name: string }; Update: Partial<Integration> };
+      notification_preferences: { Row: NotificationPreference; Insert: Partial<NotificationPreference> & { org_id: string; user_id: string; email: string }; Update: Partial<NotificationPreference> };
       api_keys: { Row: ApiKey; Insert: Partial<ApiKey> & { org_id: string; name: string; key_hash: string }; Update: Partial<ApiKey> };
       audit_logs: { Row: AuditLog; Insert: Partial<AuditLog> & { org_id: string; action: string; entity_type: string }; Update: Partial<AuditLog> };
       review_comments: { Row: ReviewComment; Insert: Partial<ReviewComment> & { org_id: string; document_id: string; user_id: string; body: string }; Update: Partial<ReviewComment> };

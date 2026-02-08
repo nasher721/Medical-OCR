@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useOrgStore } from '@/lib/hooks/use-org';
 import type { Membership, AuditLog, ApiKey } from '@/lib/supabase/types';
-import { Settings, Users, Key, FileText, Copy, Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Settings, Users, Key, FileText, Copy, Trash2, Plus, ChevronLeft, ChevronRight, Mail } from 'lucide-react';
 
 export default function SettingsPage() {
   const supabase = createClient();
   const { currentOrg } = useOrgStore();
-  const [activeTab, setActiveTab] = useState<'org' | 'users' | 'api_keys' | 'audit_logs'>('org');
+  const [activeTab, setActiveTab] = useState<'org' | 'users' | 'api_keys' | 'audit_logs' | 'notifications'>('org');
   const [orgName, setOrgName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [notificationSaving, setNotificationSaving] = useState(false);
 
   // Users
   const [members, setMembers] = useState<(Membership & { profile?: { display_name: string } })[]>([]);
@@ -27,12 +28,20 @@ export default function SettingsPage() {
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotal, setAuditTotal] = useState(0);
 
+  // Notification preferences
+  const [notificationPrefId, setNotificationPrefId] = useState<string | null>(null);
+  const [notificationEmail, setNotificationEmail] = useState('');
+  const [notifyDocumentApproved, setNotifyDocumentApproved] = useState(true);
+  const [notifyNeedsReview, setNotifyNeedsReview] = useState(true);
+  const [notifyWorkflowError, setNotifyWorkflowError] = useState(true);
+
   useEffect(() => {
     if (!currentOrg) return;
     setOrgName(currentOrg.name);
     fetchMembers();
     fetchApiKeys();
     fetchAuditLogs();
+    fetchNotificationPreferences();
   }, [currentOrg]);
 
   const fetchMembers = async () => {
@@ -54,6 +63,60 @@ export default function SettingsPage() {
   };
 
   useEffect(() => { if (currentOrg && activeTab === 'audit_logs') fetchAuditLogs(); }, [auditPage]);
+
+  const fetchNotificationPreferences = async () => {
+    if (!currentOrg) return;
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData?.user;
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('notification_preferences')
+      .select('*')
+      .eq('org_id', currentOrg.id)
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (data) {
+      setNotificationPrefId(data.id);
+      setNotificationEmail(data.email);
+      setNotifyDocumentApproved(data.document_approved);
+      setNotifyNeedsReview(data.needs_review);
+      setNotifyWorkflowError(data.workflow_error);
+    } else {
+      setNotificationPrefId(null);
+      setNotificationEmail(user.email || '');
+      setNotifyDocumentApproved(true);
+      setNotifyNeedsReview(true);
+      setNotifyWorkflowError(true);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    if (!currentOrg) return;
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData?.user;
+    if (!user) return;
+
+    setNotificationSaving(true);
+    const payload = {
+      org_id: currentOrg.id,
+      user_id: user.id,
+      email: notificationEmail || user.email || '',
+      document_approved: notifyDocumentApproved,
+      needs_review: notifyNeedsReview,
+      workflow_error: notifyWorkflowError,
+    };
+
+    if (notificationPrefId) {
+      await supabase.from('notification_preferences').update(payload).eq('id', notificationPrefId);
+    } else {
+      const { data } = await supabase.from('notification_preferences').insert(payload).select().single();
+      if (data?.id) setNotificationPrefId(data.id);
+    }
+    setNotificationSaving(false);
+  };
 
   const handleSaveOrg = async () => {
     if (!currentOrg) return;
@@ -92,6 +155,7 @@ export default function SettingsPage() {
     { id: 'users' as const, label: 'Users', icon: Users },
     { id: 'api_keys' as const, label: 'API Keys', icon: Key },
     { id: 'audit_logs' as const, label: 'Audit Logs', icon: FileText },
+    { id: 'notifications' as const, label: 'Notifications', icon: Mail },
   ];
 
   return (
@@ -248,6 +312,68 @@ export default function SettingsPage() {
                     <button onClick={() => setAuditPage(p => p + 1)} disabled={auditPage >= Math.ceil(auditTotal / 20)} className="rounded p-1.5 hover:bg-muted disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Notifications */}
+          {activeTab === 'notifications' && (
+            <div className="max-w-xl space-y-6">
+              <div>
+                <h2 className="mb-1 text-lg font-semibold">Email Notifications</h2>
+                <p className="text-sm text-muted-foreground">Choose which workflow events should trigger email alerts.</p>
+              </div>
+
+              <div className="space-y-4 rounded-lg border p-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Notification Email</label>
+                  <input
+                    type="email"
+                    value={notificationEmail}
+                    onChange={e => setNotificationEmail(e.target.value)}
+                    placeholder="alerts@yourcompany.com"
+                    className="w-full rounded-lg border border-input px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">This address will receive workflow alerts.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={notifyDocumentApproved}
+                      onChange={e => setNotifyDocumentApproved(e.target.checked)}
+                      className="h-4 w-4 rounded border"
+                    />
+                    Document approved
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={notifyNeedsReview}
+                      onChange={e => setNotifyNeedsReview(e.target.checked)}
+                      className="h-4 w-4 rounded border"
+                    />
+                    Document needs review
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={notifyWorkflowError}
+                      onChange={e => setNotifyWorkflowError(e.target.checked)}
+                      className="h-4 w-4 rounded border"
+                    />
+                    Workflow error
+                  </label>
+                </div>
+
+                <button
+                  onClick={handleSaveNotifications}
+                  disabled={notificationSaving || !notificationEmail}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {notificationSaving ? 'Saving...' : 'Save Preferences'}
+                </button>
               </div>
             </div>
           )}

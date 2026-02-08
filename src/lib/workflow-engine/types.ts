@@ -32,6 +32,7 @@ export interface WorkflowNodeConfig {
   email_to?: string;
   email_subject?: string;
   email_body?: string;
+  notify_event?: 'document_approved' | 'needs_review' | 'workflow_error';
 
   // Generic label
   label?: string;
