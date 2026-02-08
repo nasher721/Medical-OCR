@@ -70,6 +70,12 @@ export function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
         setProgress(`Processing ${file.name}...`);
         // Auto-trigger extraction
         await fetch(`/api/documents/${doc.id}/process`, { method: 'POST' });
+      } else {
+        const err = await resp.json();
+        setProgress(`Failed to save ${file.name}: ${err.error || 'Unknown error'}`);
+        console.error('Upload failed:', err);
+        // Don't close dialog if error occurred
+        continue;
       }
     }
 
@@ -96,9 +102,8 @@ export function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
-          className={`mb-4 flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
-            dragOver ? 'border-primary bg-primary/5' : 'border-border'
-          }`}
+          className={`mb-4 flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${dragOver ? 'border-primary bg-primary/5' : 'border-border'
+            }`}
         >
           <svg className="mb-2 h-10 w-10 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
           <p className="text-sm text-muted-foreground">Drag & drop files here, or</p>

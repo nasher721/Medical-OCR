@@ -43,3 +43,6 @@ supabase/.temp
 
 # python
 backend/__pycache__/
+
+# logs
+frontend.log

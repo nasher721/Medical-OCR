@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@/components/documents/status-badge';
 import { UploadDialog } from '@/components/documents/upload-dialog';
 import type { Document, DocumentStatus, FilterPreset, Model } from '@/lib/supabase/types';
+import { DocumentService } from '@/lib/services/document-service';
 import { FileText, Upload, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type BulkAction = 'approve' | 'reject' | 'reprocess' | 'delete';
@@ -61,7 +62,7 @@ export default function DocumentsPage() {
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkStatus, setBulkStatus] = useState('');
   const [docTypes, setDocTypes] = useState<string[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
+  const [models, setModels] = useState<Pick<Model, 'id' | 'name'>[]>([]);
   const [uploaders, setUploaders] = useState<UploaderOption[]>([]);
   const [presets, setPresets] = useState<FilterPreset[]>([]);
   const [presetName, setPresetName] = useState('');
@@ -75,28 +76,31 @@ export default function DocumentsPage() {
   const fetchDocuments = async () => {
     if (!currentOrg) return;
     setLoading(true);
-    const params = new URLSearchParams({
-      org_id: currentOrg.id,
-      page: page.toString(),
-      limit: limit.toString(),
-    });
-    if (search) params.set('full_text', search);
-    if (statusFilter) params.set('status', statusFilter);
-    if (docTypeFilters.length > 0) params.set('doc_type', docTypeFilters.join(','));
-    if (uploaderFilter) params.set('uploader_id', uploaderFilter);
-    if (modelFilter) params.set('model_id', modelFilter);
-    if (confidenceMin !== 0) params.set('confidence_min', confidenceMin.toString());
-    if (confidenceMax !== 1) params.set('confidence_max', confidenceMax.toString());
-    if (dateFrom) params.set('date_from', dateFrom);
-    if (dateTo) params.set('date_to', dateTo);
 
-    const resp = await fetch(`/api/documents?${params}`);
-    if (resp.ok) {
-      const data = await resp.json();
-      setDocuments(data.data || []);
-      setTotal(data.total || 0);
+    try {
+      const response = await DocumentService.search({
+        org_id: currentOrg.id,
+        page: page,
+        limit: limit,
+        full_text: search || undefined,
+        status: statusFilter || undefined,
+        doc_type: docTypeFilters.length > 0 ? docTypeFilters : undefined,
+        uploader_id: uploaderFilter || undefined,
+        model_id: modelFilter || undefined,
+        confidence_min: confidenceMin !== 0 ? confidenceMin : undefined,
+        confidence_max: confidenceMax !== 1 ? confidenceMax : undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+      });
+
+      setDocuments(response.data);
+      setTotal(response.total);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      // Optional: Add toast error here if needed, but existing code didn't have much error handling
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchDocuments(); }, [
@@ -593,11 +597,10 @@ export default function DocumentsPage() {
                 key={action}
                 onClick={() => setBulkAction(action)}
                 disabled={bulkSubmitting}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-                  action === 'delete'
-                    ? 'border border-red-200 text-red-600 hover:bg-red-50'
-                    : 'border border-input hover:bg-muted'
-                }`}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${action === 'delete'
+                  ? 'border border-red-200 text-red-600 hover:bg-red-50'
+                  : 'border border-input hover:bg-muted'
+                  }`}
               >
                 {bulkActionLabels[action]} Selected
               </button>
@@ -735,9 +738,8 @@ export default function DocumentsPage() {
               <button
                 onClick={handleBulkConfirm}
                 disabled={bulkSubmitting}
-                className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
-                  bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-primary hover:bg-primary/90'
-                }`}
+                className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-primary hover:bg-primary/90'
+                  }`}
               >
                 {bulkSubmitting ? 'Working...' : `${bulkActionLabels[bulkAction]} ${selectedCount}`}
               </button>
