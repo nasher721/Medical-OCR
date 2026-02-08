@@ -16,6 +16,7 @@ import {
   X,
   ChevronDown,
   Building2,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOrg } from "@/lib/hooks/use-org";
@@ -26,6 +27,7 @@ import { NotificationProvider } from "@/components/notifications/notification-pr
 
 const navItems = [
   { label: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard },
+  { label: "Triage", href: "/app/workspace", icon: Layers },
   { label: "Documents", href: "/app/documents", icon: FileText },
   { label: "Models", href: "/app/models", icon: Brain },
   { label: "Workflows", href: "/app/workflows", icon: GitBranch },
