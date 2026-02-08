@@ -125,6 +125,7 @@ export interface WorkflowEdge {
   edge_id: string;
   source: string;
   target: string;
+  source_handle?: string | null;
   created_at: string;
 }
 

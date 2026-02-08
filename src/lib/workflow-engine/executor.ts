@@ -1,14 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { SerializedNode, SerializedEdge, WorkflowExecutionContext, StepResult, WorkflowNodeConfig } from './types';
+import type { SerializedNode, SerializedEdge, WorkflowExecutionContext, StepResult, WorkflowNodeConfig, RuleCondition } from './types';
 import { getExtractionProvider } from '@/lib/extraction';
 import { getNotificationProvider, renderNotificationEmail } from '@/lib/notifications';
 import type { NotificationEventType } from '@/lib/notifications';
+
+type ExtractionFieldRecord = { key: string; value: string; confidence: number };
 
 export class WorkflowExecutor {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private supabase: SupabaseClient<any>;
   private nodes: SerializedNode[] = [];
   private edges: SerializedEdge[] = [];
+  private extractionFieldsCache = new Map<string, ExtractionFieldRecord[]>();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(supabase: SupabaseClient<any>) {
@@ -46,6 +49,7 @@ export class WorkflowExecutor {
       edge_id: e.edge_id,
       source: e.source,
       target: e.target,
+      source_handle: e.source_handle as string | undefined,
     }));
 
     // Create workflow run
@@ -71,9 +75,16 @@ export class WorkflowExecutor {
 
     // Execute nodes in topological order
     const sortedNodes = this.topologicalSort();
+    const outgoingEdges = this.buildOutgoingEdges();
+    const incomingEdges = this.buildIncomingEdges();
+    const activatedEdges = new Set<string>();
     let finalStatus = 'completed';
 
     for (const node of sortedNodes) {
+      if (!this.isNodeActivated(node.node_id, incomingEdges, activatedEdges)) {
+        continue;
+      }
+
       ctx.current_step++;
 
       // Log step start
@@ -107,6 +118,9 @@ export class WorkflowExecutor {
           finalStatus = 'failed';
           break;
         }
+
+        const edgesToActivate = this.selectOutgoingEdges(node, result, outgoingEdges);
+        edgesToActivate.forEach(edge => activatedEdges.add(edge.edge_id));
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'Unknown error';
         await this.supabase.from('workflow_logs').insert({
@@ -165,6 +179,64 @@ export class WorkflowExecutor {
     return sorted;
   }
 
+  private buildOutgoingEdges(): Map<string, SerializedEdge[]> {
+    const outgoing = new Map<string, SerializedEdge[]>();
+    this.nodes.forEach(node => outgoing.set(node.node_id, []));
+    this.edges.forEach(edge => {
+      if (!outgoing.has(edge.source)) outgoing.set(edge.source, []);
+      outgoing.get(edge.source)!.push(edge);
+    });
+    return outgoing;
+  }
+
+  private buildIncomingEdges(): Map<string, SerializedEdge[]> {
+    const incoming = new Map<string, SerializedEdge[]>();
+    this.nodes.forEach(node => incoming.set(node.node_id, []));
+    this.edges.forEach(edge => {
+      if (!incoming.has(edge.target)) incoming.set(edge.target, []);
+      incoming.get(edge.target)!.push(edge);
+    });
+    return incoming;
+  }
+
+  private isNodeActivated(nodeId: string, incomingEdges: Map<string, SerializedEdge[]>, activatedEdges: Set<string>): boolean {
+    const incoming = incomingEdges.get(nodeId) || [];
+    if (incoming.length === 0) return true;
+    return incoming.some(edge => activatedEdges.has(edge.edge_id));
+  }
+
+  private selectOutgoingEdges(
+    node: SerializedNode,
+    result: StepResult,
+    outgoingEdges: Map<string, SerializedEdge[]>
+  ): SerializedEdge[] {
+    const edges = outgoingEdges.get(node.node_id) || [];
+    if (edges.length === 0) return edges;
+
+    if (node.type === 'rule') {
+      const passed = Boolean(result.data?.passed);
+      return this.filterEdgesByHandle(edges, passed ? 'true' : 'false');
+    }
+
+    if (node.type === 'switch') {
+      const branch = typeof result.data?.branch === 'string' ? result.data.branch : 'default';
+      return this.filterEdgesByHandle(edges, branch);
+    }
+
+    if (node.type === 'filter') {
+      const include = Boolean(result.data?.include);
+      return this.filterEdgesByHandle(edges, include ? 'include' : 'exclude');
+    }
+
+    return edges;
+  }
+
+  private filterEdgesByHandle(edges: SerializedEdge[], handle: string): SerializedEdge[] {
+    const hasHandles = edges.some(edge => Boolean(edge.source_handle));
+    if (!hasHandles) return edges;
+    return edges.filter(edge => edge.source_handle === handle);
+  }
+
   private async executeNode(node: SerializedNode, ctx: WorkflowExecutionContext): Promise<StepResult> {
     switch (node.type) {
       case 'upload':
@@ -177,6 +249,12 @@ export class WorkflowExecutor {
 
       case 'rule':
         return this.executeRule(node.config, ctx);
+
+      case 'switch':
+        return this.executeSwitch(node.config, ctx);
+
+      case 'filter':
+        return this.executeFilter(node.config, ctx);
 
       case 'review':
         return this.executeReview(ctx);
@@ -274,29 +352,24 @@ export class WorkflowExecutor {
   private async executeRule(config: WorkflowNodeConfig, ctx: WorkflowExecutionContext): Promise<StepResult> {
     const threshold = config.threshold ?? 0.90;
 
-    // Get extraction fields
-    const { data: extractions } = await this.supabase
-      .from('extractions')
-      .select('id')
-      .eq('document_id', ctx.document_id)
-      .limit(1);
-
-    if (!extractions || extractions.length === 0) {
-      return { status: 'failed', message: 'No extraction found for rule evaluation' };
-    }
-
-    const { data: fields } = await this.supabase
-      .from('extraction_fields')
-      .select('*')
-      .eq('extraction_id', extractions[0].id);
-
-    if (!fields) return { status: 'failed', message: 'No fields found' };
+    const fields = await this.getExtractionFields(ctx);
+    if (fields.length === 0) return { status: 'failed', message: 'No extraction fields found for rule evaluation' };
 
     // Check if any required field has low confidence
-    const lowConfFields = fields.filter(f => f.confidence < threshold);
-    const allAboveThreshold = lowConfFields.length === 0;
+    let passed = false;
+    let lowConfFields: ExtractionFieldRecord[] = [];
+    if (config.conditions && config.conditions.length > 0) {
+      passed = this.evaluateRuleConditions(fields, config.conditions, config.logic || 'and');
+    } else {
+      const targetFields = config.field ? fields.filter(f => f.key === config.field) : fields;
+      if (config.field && targetFields.length === 0) {
+        return { status: 'failed', message: `Field ${config.field} not found for rule evaluation` };
+      }
+      lowConfFields = targetFields.filter(f => f.confidence < threshold);
+      passed = lowConfFields.length === 0;
+    }
 
-    if (allAboveThreshold) {
+    if (passed) {
       const action = config.action_pass || 'approve';
       if (action === 'approve') {
         await this.supabase
@@ -306,20 +379,142 @@ export class WorkflowExecutor {
       }
       return {
         status: 'success',
-        message: `All fields above ${threshold} threshold - action: ${action}`,
+        message: `Rule passed - action: ${action}`,
         data: { passed: true, action },
       };
     } else {
       const action = config.action_fail || 'needs_review';
-      await this.supabase
-        .from('documents')
-        .update({ status: action === 'reject' ? 'rejected' : 'needs_review' })
-        .eq('id', ctx.document_id);
+      if (action !== 'continue') {
+        await this.supabase
+          .from('documents')
+          .update({ status: action === 'reject' ? 'rejected' : 'needs_review' })
+          .eq('id', ctx.document_id);
+      }
       return {
         status: 'success',
-        message: `${lowConfFields.length} fields below ${threshold} - action: ${action}`,
+        message: `Rule failed - action: ${action}`,
         data: { passed: false, action, low_conf_fields: lowConfFields.map(f => f.key) },
       };
+    }
+  }
+
+  private async executeSwitch(config: WorkflowNodeConfig, ctx: WorkflowExecutionContext): Promise<StepResult> {
+    const fieldKey = config.switch_field;
+    if (!fieldKey) {
+      return { status: 'failed', message: 'Switch node missing field to evaluate' };
+    }
+
+    const fields = await this.getExtractionFields(ctx);
+    const fieldValue = fields.find(f => f.key === fieldKey)?.value;
+    const cases = config.switch_cases || [];
+    const match = cases.find(entry => String(entry.value) === String(fieldValue));
+    const branch = match?.value ?? 'default';
+
+    return {
+      status: 'success',
+      message: `Switch evaluated ${fieldKey}=${fieldValue ?? 'null'} -> ${branch}`,
+      data: { branch, value: fieldValue },
+    };
+  }
+
+  private async executeFilter(config: WorkflowNodeConfig, ctx: WorkflowExecutionContext): Promise<StepResult> {
+    const fieldKey = config.filter_field;
+    if (!fieldKey) {
+      return { status: 'failed', message: 'Filter node missing field to evaluate' };
+    }
+
+    const fields = await this.getExtractionFields(ctx);
+    const fieldValue = fields.find(f => f.key === fieldKey)?.value;
+    const operator = config.filter_operator || 'eq';
+    const targetValue = config.filter_value ?? '';
+
+    const matches = this.evaluateCondition(fieldValue, operator, targetValue);
+    const mode = config.filter_mode || 'include';
+    const include = mode === 'exclude' ? !matches : matches;
+
+    return {
+      status: 'success',
+      message: `Filter ${include ? 'included' : 'excluded'} document`,
+      data: { include, matches },
+    };
+  }
+
+  private async getExtractionFields(ctx: WorkflowExecutionContext): Promise<ExtractionFieldRecord[]> {
+    const cached = this.extractionFieldsCache.get(ctx.document_id);
+    if (cached) return cached;
+
+    const { data: extractions } = await this.supabase
+      .from('extractions')
+      .select('id')
+      .eq('document_id', ctx.document_id)
+      .limit(1);
+
+    if (!extractions || extractions.length === 0) {
+      return [];
+    }
+
+    const { data: fields } = await this.supabase
+      .from('extraction_fields')
+      .select('key, value, confidence')
+      .eq('extraction_id', extractions[0].id);
+
+    const normalized = (fields || []).map(field => ({
+      key: field.key as string,
+      value: field.value as string,
+      confidence: field.confidence as number,
+    }));
+
+    this.extractionFieldsCache.set(ctx.document_id, normalized);
+    return normalized;
+  }
+
+  private evaluateRuleConditions(
+    fields: ExtractionFieldRecord[],
+    conditions: RuleCondition[],
+    logic: 'and' | 'or'
+  ): boolean {
+    const fieldMap = new Map(fields.map(field => [field.key, field]));
+    const results = conditions.map(condition => {
+      const field = fieldMap.get(condition.field);
+      if (!field) return false;
+      const source = condition.source || 'confidence';
+      const value = source === 'confidence' ? field.confidence : field.value;
+      return this.evaluateCondition(value, condition.operator, condition.value);
+    });
+
+    if (logic === 'or') {
+      return results.some(Boolean);
+    }
+
+    return results.every(Boolean);
+  }
+
+  private evaluateCondition(value: unknown, operator: RuleCondition['operator'], target: unknown): boolean {
+    const numericValue = typeof value === 'number' ? value : Number(value);
+    const numericTarget = typeof target === 'number' ? target : Number(target);
+
+    if (operator === 'eq') {
+      if (!Number.isNaN(numericValue) && !Number.isNaN(numericTarget)) {
+        return numericValue === numericTarget;
+      }
+      return String(value) === String(target);
+    }
+
+    if (Number.isNaN(numericValue) || Number.isNaN(numericTarget)) {
+      return false;
+    }
+
+    switch (operator) {
+      case 'gt':
+        return numericValue > numericTarget;
+      case 'gte':
+        return numericValue >= numericTarget;
+      case 'lt':
+        return numericValue < numericTarget;
+      case 'lte':
+        return numericValue <= numericTarget;
+      default:
+        return false;
     }
   }
 
