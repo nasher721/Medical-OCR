@@ -26,6 +26,8 @@ const NODE_TYPES_CONFIG: Record<string, { label: string; color: string; icon: st
   upload: { label: 'Upload', color: '#22c55e', icon: '📤', bg: 'bg-green-50 border-green-300' },
   extract: { label: 'Extract Fields', color: '#3b82f6', icon: '🔍', bg: 'bg-blue-50 border-blue-300' },
   rule: { label: 'Confidence Rule', color: '#f97316', icon: '⚖️', bg: 'bg-orange-50 border-orange-300' },
+  switch: { label: 'Switch', color: '#0ea5e9', icon: '🔀', bg: 'bg-sky-50 border-sky-300' },
+  filter: { label: 'Filter', color: '#14b8a6', icon: '🧹', bg: 'bg-teal-50 border-teal-300' },
   review: { label: 'Human Review', color: '#eab308', icon: '👁️', bg: 'bg-yellow-50 border-yellow-300' },
   webhook_export: { label: 'Webhook Export', color: '#a855f7', icon: '🔗', bg: 'bg-purple-50 border-purple-300' },
   csv_export: { label: 'CSV Export', color: '#6366f1', icon: '📄', bg: 'bg-indigo-50 border-indigo-300' },
@@ -34,6 +36,7 @@ const NODE_TYPES_CONFIG: Record<string, { label: string; color: string; icon: st
 
 function CustomNode({ data }: { data: { label: string; type: string; config: Record<string, unknown> } }) {
   const cfg = NODE_TYPES_CONFIG[data.type] || NODE_TYPES_CONFIG.upload;
+  const switchCases = Array.isArray(data.config.switch_cases) ? data.config.switch_cases : [];
   return (
     <div className={`rounded-lg border-2 px-4 py-3 shadow-sm ${cfg.bg}`} style={{ minWidth: 160 }}>
       <Handle type="target" position={Position.Top} className="!bg-slate-400" />
@@ -44,6 +47,12 @@ function CustomNode({ data }: { data: { label: string; type: string; config: Rec
           {data.type === 'rule' && data.config.threshold ? (
             <div className="text-xs text-muted-foreground">Threshold: {String(data.config.threshold)}</div>
           ) : null}
+          {data.type === 'switch' && data.config.switch_field ? (
+            <div className="text-xs text-muted-foreground">Field: {String(data.config.switch_field)}</div>
+          ) : null}
+          {data.type === 'filter' && data.config.filter_field ? (
+            <div className="text-xs text-muted-foreground">Field: {String(data.config.filter_field)}</div>
+          ) : null}
           {data.type === 'webhook_export' && data.config.url ? (
             <div className="max-w-[120px] truncate text-xs text-muted-foreground">{String(data.config.url)}</div>
           ) : null}
@@ -52,7 +61,33 @@ function CustomNode({ data }: { data: { label: string; type: string; config: Rec
           ) : null}
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-slate-400" />
+      {data.type === 'rule' ? (
+        <>
+          <Handle type="source" id="true" position={Position.Bottom} className="!bg-emerald-500" style={{ left: '30%' }} />
+          <Handle type="source" id="false" position={Position.Bottom} className="!bg-rose-500" style={{ left: '70%' }} />
+        </>
+      ) : data.type === 'switch' ? (
+        <>
+          {switchCases.map((entry, index) => (
+            <Handle
+              key={String(entry.value)}
+              type="source"
+              id={String(entry.value)}
+              position={Position.Bottom}
+              className="!bg-sky-500"
+              style={{ left: `${20 + index * 20}%` }}
+            />
+          ))}
+          <Handle type="source" id="default" position={Position.Bottom} className="!bg-slate-400" style={{ left: '90%' }} />
+        </>
+      ) : data.type === 'filter' ? (
+        <>
+          <Handle type="source" id="include" position={Position.Bottom} className="!bg-emerald-500" style={{ left: '30%' }} />
+          <Handle type="source" id="exclude" position={Position.Bottom} className="!bg-rose-500" style={{ left: '70%' }} />
+        </>
+      ) : (
+        <Handle type="source" position={Position.Bottom} className="!bg-slate-400" />
+      )}
     </div>
   );
 }
@@ -84,6 +119,12 @@ export default function WorkflowBuilderPage() {
   const [configUrl, setConfigUrl] = useState('');
   const [configEmail, setConfigEmail] = useState('');
   const [configNotifyEvent, setConfigNotifyEvent] = useState('document_approved');
+  const [configSwitchField, setConfigSwitchField] = useState('');
+  const [configSwitchCases, setConfigSwitchCases] = useState('');
+  const [configFilterField, setConfigFilterField] = useState('');
+  const [configFilterOperator, setConfigFilterOperator] = useState('eq');
+  const [configFilterValue, setConfigFilterValue] = useState('');
+  const [configFilterMode, setConfigFilterMode] = useState('include');
 
   const fetchWorkflow = async () => {
     const { data: wf } = await supabase.from('workflows').select('*').eq('id', workflowId).single();
@@ -103,6 +144,10 @@ export default function WorkflowBuilderPage() {
       id: e.edge_id,
       source: e.source,
       target: e.target,
+      sourceHandle: e.source_handle || undefined,
+      label: e.source_handle || undefined,
+      labelBgStyle: { fill: '#f8fafc', color: '#0f172a', fillOpacity: 0.9 },
+      labelBgPadding: [6, 2],
       animated: true,
       style: { stroke: '#94a3b8' },
     }));
@@ -118,7 +163,14 @@ export default function WorkflowBuilderPage() {
   useEffect(() => { fetchWorkflow(); }, [workflowId]);
 
   const onConnect = useCallback((connection: Connection) => {
-    setEdges(eds => addEdge({ ...connection, animated: true, style: { stroke: '#94a3b8' } }, eds));
+    setEdges(eds => addEdge({
+      ...connection,
+      label: connection.sourceHandle || undefined,
+      labelBgStyle: { fill: '#f8fafc', color: '#0f172a', fillOpacity: 0.9 },
+      labelBgPadding: [6, 2],
+      animated: true,
+      style: { stroke: '#94a3b8' },
+    }, eds));
   }, [setEdges]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -130,6 +182,13 @@ export default function WorkflowBuilderPage() {
     setConfigUrl((config.url as string) || '');
     setConfigEmail((config.email_to as string) || '');
     setConfigNotifyEvent((config.notify_event as string) || 'document_approved');
+    setConfigSwitchField((config.switch_field as string) || '');
+    const savedCases = (config.switch_cases as Array<{ value: string }> | undefined) || [];
+    setConfigSwitchCases(savedCases.map(entry => entry.value).join(', '));
+    setConfigFilterField((config.filter_field as string) || '');
+    setConfigFilterOperator((config.filter_operator as string) || 'eq');
+    setConfigFilterValue(config.filter_value !== undefined ? String(config.filter_value) : '');
+    setConfigFilterMode((config.filter_mode as string) || 'include');
   }, []);
 
   const addNode = (type: string) => {
@@ -149,6 +208,22 @@ export default function WorkflowBuilderPage() {
     const config: Record<string, unknown> = {};
     const type = selectedNode.data.type;
     if (type === 'rule') { config.threshold = configThreshold; config.action_pass = configActionPass; config.action_fail = configActionFail; }
+    if (type === 'switch') {
+      config.switch_field = configSwitchField.trim();
+      const cases = configSwitchCases
+        .split(',')
+        .map(entry => entry.trim())
+        .filter(Boolean)
+        .map(value => ({ value }));
+      config.switch_cases = cases;
+    }
+    if (type === 'filter') {
+      config.filter_field = configFilterField.trim();
+      config.filter_operator = configFilterOperator;
+      const numericValue = Number(configFilterValue);
+      config.filter_value = Number.isNaN(numericValue) ? configFilterValue : numericValue;
+      config.filter_mode = configFilterMode;
+    }
     if (type === 'webhook_export') { config.url = configUrl; config.method = 'POST'; }
     if (type === 'notify') { config.email_to = configEmail; config.notify_event = configNotifyEvent; }
 
@@ -179,6 +254,7 @@ export default function WorkflowBuilderPage() {
         edge_id: e.id,
         source: e.source,
         target: e.target,
+        source_handle: e.sourceHandle || null,
       }));
       await supabase.from('workflow_edges').insert(edgeInserts);
     }
@@ -294,6 +370,23 @@ export default function WorkflowBuilderPage() {
                 <div><label className="mb-1 block text-xs font-medium">Confidence Threshold</label><input type="number" value={configThreshold} onChange={e => setConfigThreshold(parseFloat(e.target.value))} step={0.01} min={0} max={1} className="w-full rounded border px-2 py-1.5 text-sm" /></div>
                 <div><label className="mb-1 block text-xs font-medium">If Pass</label><select value={configActionPass} onChange={e => setConfigActionPass(e.target.value)} className="w-full rounded border px-2 py-1.5 text-sm"><option value="approve">Auto-Approve</option><option value="continue">Continue</option></select></div>
                 <div><label className="mb-1 block text-xs font-medium">If Fail</label><select value={configActionFail} onChange={e => setConfigActionFail(e.target.value)} className="w-full rounded border px-2 py-1.5 text-sm"><option value="needs_review">Needs Review</option><option value="reject">Reject</option><option value="continue">Continue</option></select></div>
+              </div>
+            )}
+
+            {selectedNode.data.type === 'switch' && (
+              <div className="space-y-3">
+                <div><label className="mb-1 block text-xs font-medium">Field to Switch On</label><input type="text" value={configSwitchField} onChange={e => setConfigSwitchField(e.target.value)} placeholder="field_key" className="w-full rounded border px-2 py-1.5 text-sm" /></div>
+                <div><label className="mb-1 block text-xs font-medium">Case Values (comma separated)</label><input type="text" value={configSwitchCases} onChange={e => setConfigSwitchCases(e.target.value)} placeholder="urgent, standard, other" className="w-full rounded border px-2 py-1.5 text-sm" /></div>
+                <p className="text-xs text-muted-foreground">Edges from this node can connect from case handles or the default handle.</p>
+              </div>
+            )}
+
+            {selectedNode.data.type === 'filter' && (
+              <div className="space-y-3">
+                <div><label className="mb-1 block text-xs font-medium">Field to Filter On</label><input type="text" value={configFilterField} onChange={e => setConfigFilterField(e.target.value)} placeholder="field_key" className="w-full rounded border px-2 py-1.5 text-sm" /></div>
+                <div><label className="mb-1 block text-xs font-medium">Operator</label><select value={configFilterOperator} onChange={e => setConfigFilterOperator(e.target.value)} className="w-full rounded border px-2 py-1.5 text-sm"><option value="eq">Equals</option><option value="gt">Greater Than</option><option value="gte">Greater Than / Equal</option><option value="lt">Less Than</option><option value="lte">Less Than / Equal</option></select></div>
+                <div><label className="mb-1 block text-xs font-medium">Value</label><input type="text" value={configFilterValue} onChange={e => setConfigFilterValue(e.target.value)} placeholder="value to match" className="w-full rounded border px-2 py-1.5 text-sm" /></div>
+                <div><label className="mb-1 block text-xs font-medium">Mode</label><select value={configFilterMode} onChange={e => setConfigFilterMode(e.target.value)} className="w-full rounded border px-2 py-1.5 text-sm"><option value="include">Include Matches</option><option value="exclude">Exclude Matches</option></select></div>
               </div>
             )}
 

@@ -4,10 +4,19 @@ export type WorkflowNodeType =
   | 'email_ingest'
   | 'extract'
   | 'rule'
+  | 'switch'
+  | 'filter'
   | 'review'
   | 'webhook_export'
   | 'csv_export'
   | 'notify';
+
+export interface RuleCondition {
+  field: string;
+  operator: 'gt' | 'lt' | 'gte' | 'lte' | 'eq';
+  value: number | string;
+  source?: 'confidence' | 'value';
+}
 
 export interface WorkflowNodeConfig {
   // Extract node
@@ -19,6 +28,18 @@ export interface WorkflowNodeConfig {
   threshold?: number;
   action_pass?: 'approve' | 'continue';
   action_fail?: 'needs_review' | 'reject' | 'continue';
+  conditions?: RuleCondition[];
+  logic?: 'and' | 'or';
+
+  // Switch node
+  switch_field?: string;
+  switch_cases?: Array<{ value: string; label?: string }>;
+
+  // Filter node
+  filter_field?: string;
+  filter_operator?: 'gt' | 'lt' | 'gte' | 'lte' | 'eq';
+  filter_value?: number | string;
+  filter_mode?: 'include' | 'exclude';
 
   // Webhook export
   url?: string;
@@ -49,6 +70,7 @@ export interface SerializedEdge {
   edge_id: string;
   source: string;
   target: string;
+  source_handle?: string;
 }
 
 export interface WorkflowExecutionContext {
