@@ -100,6 +100,70 @@ export interface TrainingExample {
   created_at: string;
 }
 
+export interface DocumentPage {
+  id: string;
+  document_id: string;
+  page_number: number;
+  width: number;
+  height: number;
+  created_at: string;
+}
+
+export interface OcrToken {
+  id: string;
+  document_id: string;
+  page_number: number;
+  text: string;
+  bbox: { x: number; y: number; w: number; h: number };
+  line_number: number | null;
+  block_number: number | null;
+  confidence: number | null;
+  created_at: string;
+}
+
+export interface Annotation {
+  id: string;
+  document_id: string;
+  page_number: number;
+  field_key: string;
+  value: string;
+  bbox: { x: number; y: number; w: number; h: number };
+  status: 'accepted' | 'corrected' | 'rejected';
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FieldSchema {
+  id: string;
+  org_id: string;
+  key: string;
+  label: string;
+  field_type: string;
+  repeating: boolean;
+  synonyms: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ModelFeedback {
+  id: string;
+  document_id: string;
+  annotation_id: string | null;
+  action: 'accept' | 'correct' | 'reject';
+  previous_value: string | null;
+  corrected_value: string | null;
+  created_at: string;
+}
+
+export interface StructuredResult {
+  id: string;
+  document_id: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Workflow {
   id: string;
   org_id: string;
