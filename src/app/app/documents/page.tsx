@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useOrgStore } from '@/lib/hooks/use-org';
+import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@/components/documents/status-badge';
 import { UploadDialog } from '@/components/documents/upload-dialog';
-import type { Document, DocumentStatus } from '@/lib/supabase/types';
+import type { Document, DocumentStatus, FilterPreset, Model } from '@/lib/supabase/types';
 import { FileText, Upload, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type BulkAction = 'approve' | 'reject' | 'reprocess' | 'delete';
@@ -17,12 +19,40 @@ const bulkActionLabels: Record<BulkAction, string> = {
   delete: 'Delete',
 };
 
+type UploaderOption = {
+  id: string;
+  label: string;
+};
+
+type FilterPresetPayload = {
+  full_text: string;
+  status: string;
+  doc_types: string[];
+  uploader_id: string;
+  model_id: string;
+  confidence_min: number;
+  confidence_max: number;
+  date_from: string;
+  date_to: string;
+};
+
 export default function DocumentsPage() {
   const { currentOrg } = useOrgStore();
+  const supabase = createClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [docTypeFilters, setDocTypeFilters] = useState<string[]>([]);
+  const [uploaderFilter, setUploaderFilter] = useState('');
+  const [modelFilter, setModelFilter] = useState('');
+  const [confidenceMin, setConfidenceMin] = useState(0);
+  const [confidenceMax, setConfidenceMax] = useState(1);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
@@ -30,6 +60,15 @@ export default function DocumentsPage() {
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkStatus, setBulkStatus] = useState('');
+  const [docTypes, setDocTypes] = useState<string[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [uploaders, setUploaders] = useState<UploaderOption[]>([]);
+  const [presets, setPresets] = useState<FilterPreset[]>([]);
+  const [presetName, setPresetName] = useState('');
+  const [activePresetId, setActivePresetId] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const selectAllRef = useRef<HTMLInputElement | null>(null);
   const limit = 20;
 
@@ -41,8 +80,15 @@ export default function DocumentsPage() {
       page: page.toString(),
       limit: limit.toString(),
     });
-    if (search) params.set('search', search);
+    if (search) params.set('full_text', search);
     if (statusFilter) params.set('status', statusFilter);
+    if (docTypeFilters.length > 0) params.set('doc_type', docTypeFilters.join(','));
+    if (uploaderFilter) params.set('uploader_id', uploaderFilter);
+    if (modelFilter) params.set('model_id', modelFilter);
+    if (confidenceMin !== 0) params.set('confidence_min', confidenceMin.toString());
+    if (confidenceMax !== 1) params.set('confidence_max', confidenceMax.toString());
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
 
     const resp = await fetch(`/api/documents?${params}`);
     if (resp.ok) {
@@ -53,7 +99,127 @@ export default function DocumentsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchDocuments(); }, [currentOrg, page, statusFilter]);
+  useEffect(() => { fetchDocuments(); }, [
+    currentOrg,
+    page,
+    search,
+    statusFilter,
+    docTypeFilters,
+    uploaderFilter,
+    modelFilter,
+    confidenceMin,
+    confidenceMax,
+    dateFrom,
+    dateTo,
+  ]);
+
+  useEffect(() => {
+    if (!searchParams) return;
+    const searchValue = searchParams.get('full_text') ?? searchParams.get('search') ?? '';
+    setSearchInput(searchValue);
+    setSearch(searchValue);
+    setStatusFilter(searchParams.get('status') ?? '');
+    const docTypesFromQuery = searchParams.get('doc_type')?.split(',').filter(Boolean) ?? [];
+    setDocTypeFilters(docTypesFromQuery);
+    setUploaderFilter(searchParams.get('uploader_id') ?? '');
+    setModelFilter(searchParams.get('model_id') ?? '');
+    const minParam = Number(searchParams.get('confidence_min'));
+    const maxParam = Number(searchParams.get('confidence_max'));
+    setConfidenceMin(Number.isNaN(minParam) ? 0 : minParam);
+    setConfidenceMax(Number.isNaN(maxParam) ? 1 : maxParam);
+    setDateFrom(searchParams.get('date_from') ?? '');
+    setDateTo(searchParams.get('date_to') ?? '');
+    const pageParam = Number(searchParams.get('page') || '1');
+    setPage(Number.isNaN(pageParam) ? 1 : pageParam);
+    setHydrated(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const params = new URLSearchParams();
+    if (search) params.set('full_text', search);
+    if (statusFilter) params.set('status', statusFilter);
+    if (docTypeFilters.length > 0) params.set('doc_type', docTypeFilters.join(','));
+    if (uploaderFilter) params.set('uploader_id', uploaderFilter);
+    if (modelFilter) params.set('model_id', modelFilter);
+    if (confidenceMin !== 0) params.set('confidence_min', confidenceMin.toString());
+    if (confidenceMax !== 1) params.set('confidence_max', confidenceMax.toString());
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    if (page > 1) params.set('page', page.toString());
+    const queryString = params.toString();
+    router.replace(queryString ? `/app/documents?${queryString}` : '/app/documents', { scroll: false });
+  }, [
+    hydrated,
+    search,
+    statusFilter,
+    docTypeFilters,
+    uploaderFilter,
+    modelFilter,
+    confidenceMin,
+    confidenceMax,
+    dateFrom,
+    dateTo,
+    page,
+    router,
+  ]);
+
+  useEffect(() => {
+    if (!currentOrg) return;
+    const loadMetadata = async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      setUserId(user?.id ?? null);
+
+      const { data: docTypeData } = await supabase
+        .from('documents')
+        .select('doc_type')
+        .eq('org_id', currentOrg.id);
+      const uniqueDocTypes = Array.from(new Set((docTypeData || []).map((row) => row.doc_type))).sort();
+      setDocTypes(uniqueDocTypes);
+
+      const { data: modelData } = await supabase
+        .from('models')
+        .select('id,name')
+        .eq('org_id', currentOrg.id)
+        .order('created_at', { ascending: false });
+      setModels(modelData || []);
+
+      const { data: membershipData } = await supabase
+        .from('memberships')
+        .select('user_id')
+        .eq('org_id', currentOrg.id);
+      const uploaderIds = Array.from(new Set((membershipData || []).map((row) => row.user_id)));
+      if (uploaderIds.length > 0) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('user_id, display_name')
+          .in('user_id', uploaderIds);
+        const profileMap = new Map((profileData || []).map((profile) => [profile.user_id, profile.display_name]));
+        const uploaderOptions = uploaderIds.map((id) => ({
+          id,
+          label: profileMap.get(id) || `${id.slice(0, 8)}...`,
+        }));
+        setUploaders(uploaderOptions);
+      } else {
+        setUploaders([]);
+      }
+
+      if (user?.id) {
+        const { data: presetData } = await supabase
+          .from('filter_presets')
+          .select('*')
+          .eq('org_id', currentOrg.id)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        setPresets(presetData || []);
+      } else {
+        setPresets([]);
+      }
+    };
+
+    loadMetadata();
+  }, [currentOrg, supabase]);
 
   useEffect(() => {
     setSelectedIds(prev => {
@@ -76,7 +242,79 @@ export default function DocumentsPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    fetchDocuments();
+    setSearch(searchInput);
+  };
+
+  const handlePresetSelect = (presetId: string) => {
+    setActivePresetId(presetId);
+    const preset = presets.find((item) => item.id === presetId);
+    if (!preset) return;
+    const filters = preset.filters as Partial<FilterPresetPayload>;
+    const nextSearch = filters.full_text ?? '';
+    setSearchInput(nextSearch);
+    setSearch(nextSearch);
+    setStatusFilter(filters.status ?? '');
+    setDocTypeFilters(filters.doc_types ?? []);
+    setUploaderFilter(filters.uploader_id ?? '');
+    setModelFilter(filters.model_id ?? '');
+    setConfidenceMin(typeof filters.confidence_min === 'number' ? filters.confidence_min : 0);
+    setConfidenceMax(typeof filters.confidence_max === 'number' ? filters.confidence_max : 1);
+    setDateFrom(filters.date_from ?? '');
+    setDateTo(filters.date_to ?? '');
+    setPage(1);
+    setPresetName(preset.name);
+  };
+
+  const handleSavePreset = async () => {
+    if (!currentOrg || !userId || !presetName.trim()) return;
+    setSavingPreset(true);
+    const payload: FilterPresetPayload = {
+      full_text: search,
+      status: statusFilter,
+      doc_types: docTypeFilters,
+      uploader_id: uploaderFilter,
+      model_id: modelFilter,
+      confidence_min: confidenceMin,
+      confidence_max: confidenceMax,
+      date_from: dateFrom,
+      date_to: dateTo,
+    };
+    await supabase
+      .from('filter_presets')
+      .upsert(
+        {
+          org_id: currentOrg.id,
+          user_id: userId,
+          name: presetName.trim(),
+          filters: payload,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,name' }
+      );
+    const { data: presetData } = await supabase
+      .from('filter_presets')
+      .select('*')
+      .eq('org_id', currentOrg.id)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    setPresets(presetData || []);
+    setSavingPreset(false);
+  };
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setSearchInput('');
+    setStatusFilter('');
+    setDocTypeFilters([]);
+    setUploaderFilter('');
+    setModelFilter('');
+    setConfidenceMin(0);
+    setConfidenceMax(1);
+    setDateFrom('');
+    setDateTo('');
+    setActivePresetId('');
+    setPresetName('');
+    setPage(1);
   };
 
   const selectedCount = selectedIds.size;
@@ -149,32 +387,192 @@ export default function DocumentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <form onSubmit={handleSearch} className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search documents..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-input bg-background py-2 pl-10 pr-4 text-sm"
-          />
-        </form>
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="">All Status</option>
-            <option value="uploaded">Uploaded</option>
-            <option value="processing">Processing</option>
-            <option value="needs_review">Needs Review</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="exported">Exported</option>
-          </select>
+      <div className="mb-4 space-y-4">
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[220px]">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Saved filters</label>
+              <select
+                value={activePresetId}
+                onChange={(e) => handlePresetSelect(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Select preset</option>
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>{preset.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="min-w-[220px] flex-1">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Preset name</label>
+              <input
+                type="text"
+                placeholder="Name this filter set..."
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <button
+              onClick={handleSavePreset}
+              disabled={savingPreset || !presetName.trim()}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {savingPreset ? 'Saving...' : 'Save Preset'}
+            </button>
+            <button
+              onClick={handleClearFilters}
+              className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-lg border bg-card p-4">
+          <div className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Filter className="h-4 w-4" />
+            Filters
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <form onSubmit={handleSearch} className="relative lg:col-span-3">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Full-text search</label>
+              <Search className="absolute left-3 top-[38px] h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search extracted text..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background py-2 pl-10 pr-20 text-sm"
+              />
+              <button
+                type="submit"
+                className="absolute right-2 top-[30px] rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+              >
+                Search
+              </button>
+            </form>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">All Status</option>
+                <option value="uploaded">Uploaded</option>
+                <option value="processing">Processing</option>
+                <option value="needs_review">Needs Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="exported">Exported</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Document Types</label>
+              <select
+                multiple
+                value={docTypeFilters}
+                onChange={(e) => {
+                  const selections = Array.from(e.target.selectedOptions).map((option) => option.value);
+                  setDocTypeFilters(selections);
+                  setPage(1);
+                }}
+                className="h-24 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
+                {docTypes.length === 0 && (
+                  <option disabled>No document types</option>
+                )}
+                {docTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Uploader</label>
+              <select
+                value={uploaderFilter}
+                onChange={(e) => { setUploaderFilter(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">All Uploaders</option>
+                {uploaders.map((uploader) => (
+                  <option key={uploader.id} value={uploader.id}>{uploader.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Model</label>
+              <select
+                value={modelFilter}
+                onChange={(e) => { setModelFilter(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">All Models</option>
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>{model.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Date range</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="lg:col-span-2">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Confidence range</label>
+              <div className="flex flex-col gap-2">
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={confidenceMin}
+                  onChange={(e) => {
+                    const nextValue = Math.min(Number(e.target.value), confidenceMax);
+                    setConfidenceMin(nextValue);
+                    setPage(1);
+                  }}
+                  className="w-full accent-primary"
+                />
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={confidenceMax}
+                  onChange={(e) => {
+                    const nextValue = Math.max(Number(e.target.value), confidenceMin);
+                    setConfidenceMax(nextValue);
+                    setPage(1);
+                  }}
+                  className="w-full accent-primary"
+                />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {confidenceMin.toFixed(2)} – {confidenceMax.toFixed(2)}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
