@@ -12,6 +12,7 @@ const integrations = [
     color: 'bg-purple-100 text-purple-600',
     status: 'Available',
     link: '/app/integrations/webhook-tester',
+    linkLabel: 'Open Tester',
   },
   {
     id: 'api',
@@ -35,7 +36,9 @@ const integrations = [
     description: 'Send email alerts for document processing events',
     icon: Mail,
     color: 'bg-orange-100 text-orange-600',
-    status: 'Coming Soon',
+    status: 'Available',
+    link: '/app/settings',
+    linkLabel: 'Manage Settings',
   },
 ];
 
@@ -66,7 +69,7 @@ export default function IntegrationsPage() {
             </div>
             {integration.link && (
               <Link href={integration.link} className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                Open Tester <ExternalLink className="h-3 w-3" />
+                {integration.linkLabel || 'Open Tester'} <ExternalLink className="h-3 w-3" />
               </Link>
             )}
           </div>

@@ -47,6 +47,9 @@ function CustomNode({ data }: { data: { label: string; type: string; config: Rec
           {data.type === 'webhook_export' && data.config.url ? (
             <div className="max-w-[120px] truncate text-xs text-muted-foreground">{String(data.config.url)}</div>
           ) : null}
+          {data.type === 'notify' && data.config.notify_event ? (
+            <div className="text-xs text-muted-foreground">Event: {String(data.config.notify_event)}</div>
+          ) : null}
         </div>
       </div>
       <Handle type="source" position={Position.Bottom} className="!bg-slate-400" />
@@ -80,6 +83,7 @@ export default function WorkflowBuilderPage() {
   const [configActionFail, setConfigActionFail] = useState('needs_review');
   const [configUrl, setConfigUrl] = useState('');
   const [configEmail, setConfigEmail] = useState('');
+  const [configNotifyEvent, setConfigNotifyEvent] = useState('document_approved');
 
   const fetchWorkflow = async () => {
     const { data: wf } = await supabase.from('workflows').select('*').eq('id', workflowId).single();
@@ -125,6 +129,7 @@ export default function WorkflowBuilderPage() {
     setConfigActionFail((config.action_fail as string) || 'needs_review');
     setConfigUrl((config.url as string) || '');
     setConfigEmail((config.email_to as string) || '');
+    setConfigNotifyEvent((config.notify_event as string) || 'document_approved');
   }, []);
 
   const addNode = (type: string) => {
@@ -145,7 +150,7 @@ export default function WorkflowBuilderPage() {
     const type = selectedNode.data.type;
     if (type === 'rule') { config.threshold = configThreshold; config.action_pass = configActionPass; config.action_fail = configActionFail; }
     if (type === 'webhook_export') { config.url = configUrl; config.method = 'POST'; }
-    if (type === 'notify') { config.email_to = configEmail; }
+    if (type === 'notify') { config.email_to = configEmail; config.notify_event = configNotifyEvent; }
 
     setNodes(nds => nds.map(n => n.id === selectedNode.id ? { ...n, data: { ...n.data, config } } : n));
     setSelectedNode(null);
@@ -301,6 +306,14 @@ export default function WorkflowBuilderPage() {
             {selectedNode.data.type === 'notify' && (
               <div className="space-y-3">
                 <div><label className="mb-1 block text-xs font-medium">Email To</label><input type="email" value={configEmail} onChange={e => setConfigEmail(e.target.value)} placeholder="user@example.com" className="w-full rounded border px-2 py-1.5 text-sm" /></div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium">Event Type</label>
+                  <select value={configNotifyEvent} onChange={e => setConfigNotifyEvent(e.target.value)} className="w-full rounded border px-2 py-1.5 text-sm">
+                    <option value="document_approved">Document Approved</option>
+                    <option value="needs_review">Needs Review</option>
+                    <option value="workflow_error">Workflow Error</option>
+                  </select>
+                </div>
               </div>
             )}
 

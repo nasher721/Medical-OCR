@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SerializedNode, SerializedEdge, WorkflowExecutionContext, StepResult, WorkflowNodeConfig } from './types';
 import { getExtractionProvider } from '@/lib/extraction';
+import { getNotificationProvider, renderNotificationEmail } from '@/lib/notifications';
+import type { NotificationEventType } from '@/lib/notifications';
 
 export class WorkflowExecutor {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,6 +103,7 @@ export class WorkflowExecutor {
           break;
         }
         if (result.status === 'failed') {
+          await this.sendWorkflowErrorNotification(ctx);
           finalStatus = 'failed';
           break;
         }
@@ -113,6 +116,7 @@ export class WorkflowExecutor {
           status: 'failed',
           message: errMsg,
         });
+        await this.sendWorkflowErrorNotification(ctx, errMsg);
         finalStatus = 'failed';
         break;
       }
@@ -184,7 +188,7 @@ export class WorkflowExecutor {
         return this.executeCsvExport(node.config, ctx);
 
       case 'notify':
-        return { status: 'success', message: `Email notification stub: would send to ${node.config.email_to || 'configured recipient'}` };
+        return this.executeNotify(node.config, ctx);
 
       default:
         return { status: 'failed', message: `Unknown node type: ${node.type}` };
@@ -426,5 +430,82 @@ export class WorkflowExecutor {
       message: `CSV exported with ${exportFields.length} fields`,
       data: { csv_path: csvPath, field_count: exportFields.length },
     };
+  }
+
+  private async executeNotify(config: WorkflowNodeConfig, ctx: WorkflowExecutionContext): Promise<StepResult> {
+    const event = (config.notify_event || 'document_approved') as NotificationEventType;
+    const recipients = await this.resolveNotificationRecipients(event, ctx.org_id, config.email_to);
+
+    if (recipients.length === 0) {
+      return { status: 'failed', message: `No recipients configured for ${event} notifications` };
+    }
+
+    const [{ data: org }, { data: doc }] = await Promise.all([
+      this.supabase.from('orgs').select('name').eq('id', ctx.org_id).single(),
+      this.supabase.from('documents').select('filename').eq('id', ctx.document_id).single(),
+    ]);
+
+    const { subject, html, text } = renderNotificationEmail(event, {
+      orgName: org?.name,
+      documentId: ctx.document_id,
+      documentName: doc?.filename,
+      workflowRunId: ctx.workflow_run_id,
+    });
+
+    const provider = getNotificationProvider();
+    const response = await provider.send({
+      event,
+      to: recipients,
+      subject,
+      html,
+      text,
+    });
+
+    return {
+      status: 'success',
+      message: `Notification sent to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}`,
+      data: { provider_id: response.id, recipients },
+    };
+  }
+
+  private async resolveNotificationRecipients(
+    event: NotificationEventType,
+    orgId: string,
+    additionalEmails?: string
+  ): Promise<string[]> {
+    const { data: prefs } = await this.supabase
+      .from('notification_preferences')
+      .select('email, document_approved, needs_review, workflow_error')
+      .eq('org_id', orgId);
+
+    const flagKey = event === 'document_approved'
+      ? 'document_approved'
+      : event === 'needs_review'
+        ? 'needs_review'
+        : 'workflow_error';
+
+    const preferenceEmails = (prefs || [])
+      .filter(pref => Boolean((pref as Record<string, unknown>)[flagKey]))
+      .map(pref => pref.email);
+
+    const configuredEmails = this.parseEmailList(additionalEmails);
+
+    return Array.from(new Set([...preferenceEmails, ...configuredEmails]));
+  }
+
+  private parseEmailList(value?: string): string[] {
+    if (!value) return [];
+    return value
+      .split(/[,;\\s]+/g)
+      .map(entry => entry.trim())
+      .filter(Boolean);
+  }
+
+  private async sendWorkflowErrorNotification(ctx: WorkflowExecutionContext, _errorMessage?: string): Promise<void> {
+    try {
+      await this.executeNotify({ notify_event: 'workflow_error' }, ctx);
+    } catch {
+      // Ignore notification errors to avoid masking workflow failures.
+    }
   }
 }
