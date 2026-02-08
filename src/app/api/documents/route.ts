@@ -69,7 +69,21 @@ export async function POST(request: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  console.log(`[Upload] User ${user.id} uploading to org ${org_id}`);
+
+  if (error) {
+    console.error('[Upload] Error inserting document:', error);
+    // Debug membership
+    const { data: member, error: memberError } = await supabase
+      .from('memberships')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('org_id', org_id);
+    console.log('[Upload] Membership check:', member, memberError);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+
 
   // Log audit
   await supabase.from('audit_logs').insert({
