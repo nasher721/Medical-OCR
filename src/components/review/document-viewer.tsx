@@ -16,9 +16,7 @@ interface DocumentViewerProps {
 export function DocumentViewer({ storagePath, mimeType, fields, activeFieldId, onFieldClick }: DocumentViewerProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -30,15 +28,6 @@ export function DocumentViewer({ storagePath, mimeType, fields, activeFieldId, o
       });
   }, [storagePath]);
 
-  const handleImageLoad = () => {
-    if (imgRef.current) {
-      setImgSize({
-        width: imgRef.current.naturalWidth,
-        height: imgRef.current.naturalHeight,
-      });
-    }
-  };
-
   // Scroll to active field bbox
   useEffect(() => {
     if (activeFieldId && containerRef.current) {
@@ -48,6 +37,19 @@ export function DocumentViewer({ storagePath, mimeType, fields, activeFieldId, o
   }, [activeFieldId]);
 
   const pageFields = fields.filter(f => f.page === 1);
+  const getConfidenceStyle = (confidence: number) => {
+    if (confidence >= 0.9) {
+      return 'border-emerald-500/80 bg-emerald-500/15 hover:bg-emerald-500/25';
+    }
+
+    if (confidence >= 0.75) {
+      return 'border-amber-500/80 bg-amber-500/20 hover:bg-amber-500/30';
+    }
+
+    return 'border-rose-500/80 bg-rose-500/20 hover:bg-rose-500/30';
+  };
+
+  const getConfidenceLabel = (confidence: number) => `${Math.round(confidence * 100)}%`;
 
   return (
     <div className="flex h-full flex-col">
@@ -91,10 +93,8 @@ export function DocumentViewer({ storagePath, mimeType, fields, activeFieldId, o
               />
             ) : (
               <img
-                ref={imgRef}
                 src={url}
                 alt="Document"
-                onLoad={handleImageLoad}
                 className="max-w-[600px] bg-white"
                 draggable={false}
               />
@@ -104,8 +104,6 @@ export function DocumentViewer({ storagePath, mimeType, fields, activeFieldId, o
             {pageFields.map((field) => {
               if (!field.bbox) return null;
               const bbox = field.bbox as { x: number; y: number; w: number; h: number };
-              const containerW = mimeType === 'application/pdf' ? 600 : (imgSize.width || 600);
-              const containerH = mimeType === 'application/pdf' ? 800 : (imgSize.height || 800);
               const isActive = activeFieldId === field.id;
 
               return (
@@ -113,10 +111,17 @@ export function DocumentViewer({ storagePath, mimeType, fields, activeFieldId, o
                   key={field.id}
                   data-field-id={field.id}
                   onClick={(e) => { e.stopPropagation(); onFieldClick(field); }}
-                  className={`absolute cursor-pointer border-2 transition-all ${
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      onFieldClick(field);
+                    }
+                  }}
+                  className={`group absolute cursor-pointer border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                     isActive
-                      ? 'border-orange-500 bg-orange-500/20'
-                      : 'border-blue-500/50 bg-blue-500/10 hover:bg-blue-500/20'
+                      ? 'border-primary bg-primary/15 ring-2 ring-primary/40'
+                      : getConfidenceStyle(field.confidence)
                   }`}
                   style={{
                     left: `${bbox.x * 100}%`,
@@ -124,8 +129,13 @@ export function DocumentViewer({ storagePath, mimeType, fields, activeFieldId, o
                     width: `${bbox.w * 100}%`,
                     height: `${bbox.h * 100}%`,
                   }}
-                  title={`${field.key}: ${field.value}`}
-                />
+                >
+                  <div className="pointer-events-none absolute left-1/2 top-0 z-10 w-max -translate-x-1/2 -translate-y-full rounded-md bg-slate-900/90 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                    <div className="font-semibold">{field.key}</div>
+                    <div className="max-w-[200px] truncate text-slate-200">{field.value || 'Empty'}</div>
+                    <div className="text-slate-300">Confidence: {getConfidenceLabel(field.confidence)}</div>
+                  </div>
+                </div>
               );
             })}
           </div>
