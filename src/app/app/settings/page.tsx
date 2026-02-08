@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useOrgStore } from '@/lib/hooks/use-org';
-import type { Membership, AuditLog, ApiKey } from '@/lib/supabase/types';
+import type { Membership, AuditLog, ApiKey, Invitation } from '@/lib/supabase/types';
 import { Settings, Users, Key, FileText, Copy, Trash2, Plus, ChevronLeft, ChevronRight, Mail } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -16,6 +16,12 @@ export default function SettingsPage() {
 
   // Users
   const [members, setMembers] = useState<(Membership & { profile?: { display_name: string } })[]>([]);
+  const [invitations, setInvitations] = useState<Omit<Invitation, 'token_hash'>[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('member');
+  const [inviteSending, setInviteSending] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // API Keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -39,15 +45,44 @@ export default function SettingsPage() {
     if (!currentOrg) return;
     setOrgName(currentOrg.name);
     fetchMembers();
+    fetchInvitations();
     fetchApiKeys();
     fetchAuditLogs();
     fetchNotificationPreferences();
+    void supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, [currentOrg]);
 
   const fetchMembers = async () => {
     if (!currentOrg) return;
-    const { data } = await supabase.from('memberships').select('*').eq('org_id', currentOrg.id);
-    setMembers(data || []);
+    const { data: memberData } = await supabase.from('memberships').select('*').eq('org_id', currentOrg.id);
+    const memberList = memberData || [];
+    const memberIds = memberList.map(member => member.user_id);
+    let profiles: Record<string, { display_name: string }> = {};
+    if (memberIds.length > 0) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('user_id, display_name')
+        .in('user_id', memberIds);
+      profiles = (profileData || []).reduce((acc, profile) => {
+        acc[profile.user_id] = { display_name: profile.display_name };
+        return acc;
+      }, {} as Record<string, { display_name: string }>);
+    }
+    setMembers(
+      memberList.map(member => ({
+        ...member,
+        profile: profiles[member.user_id],
+      }))
+    );
+  };
+
+  const fetchInvitations = async () => {
+    if (!currentOrg) return;
+    const resp = await fetch(`/api/invitations?org_id=${currentOrg.id}`);
+    if (resp.ok) {
+      const data = await resp.json();
+      setInvitations(data.data || []);
+    }
   };
 
   const fetchApiKeys = async () => {
@@ -150,6 +185,48 @@ export default function SettingsPage() {
     fetchMembers();
   };
 
+  const handleRemoveMember = async (membershipId: string) => {
+    const confirmed = window.confirm('Remove this member from the organization?');
+    if (!confirmed) return;
+    await supabase.from('memberships').delete().eq('id', membershipId);
+    fetchMembers();
+  };
+
+  const handleInvite = async () => {
+    if (!currentOrg || !inviteEmail.trim()) return;
+    setInviteSending(true);
+    const resp = await fetch('/api/invitations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ org_id: currentOrg.id, email: inviteEmail.trim(), role: inviteRole }),
+    });
+    if (resp.ok) {
+      setInviteEmail('');
+      setInviteRole('member');
+      setShowInviteForm(false);
+      fetchInvitations();
+    }
+    setInviteSending(false);
+  };
+
+  const handleResendInvite = async (inviteId: string) => {
+    if (!currentOrg) return;
+    const resp = await fetch('/api/invitations', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: inviteId, org_id: currentOrg.id }),
+    });
+    if (resp.ok) fetchInvitations();
+  };
+
+  const handleRevokeInvite = async (inviteId: string) => {
+    if (!currentOrg) return;
+    const confirmed = window.confirm('Revoke this invitation?');
+    if (!confirmed) return;
+    const resp = await fetch(`/api/invitations?id=${inviteId}&org_id=${currentOrg.id}`, { method: 'DELETE' });
+    if (resp.ok) fetchInvitations();
+  };
+
   const tabs = [
     { id: 'org' as const, label: 'Organization', icon: Settings },
     { id: 'users' as const, label: 'Users', icon: Users },
@@ -206,17 +283,69 @@ export default function SettingsPage() {
             <div>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Team Members</h2>
-                <button className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                <button
+                  onClick={() => setShowInviteForm(prev => !prev)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
                   <Plus className="h-3.5 w-3.5" /> Invite User
                 </button>
               </div>
+              {showInviteForm && (
+                <div className="mb-4 rounded-lg border p-4">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex-1">
+                      <label className="mb-1 block text-sm font-medium">Email</label>
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={e => setInviteEmail(e.target.value)}
+                        placeholder="teammate@company.com"
+                        className="w-full rounded-lg border border-input px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Role</label>
+                      <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+                        <option value="admin">Admin</option>
+                        <option value="reviewer">Reviewer</option>
+                        <option value="member">Member</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleInvite}
+                      disabled={inviteSending || !inviteEmail.trim()}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {inviteSending ? 'Sending...' : 'Send Invite'}
+                    </button>
+                    <button onClick={() => setShowInviteForm(false)} className="rounded-lg border px-4 py-2 text-sm hover:bg-muted">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="rounded-lg border">
                 <table className="w-full">
-                  <thead><tr className="border-b bg-muted/50"><th className="px-4 py-2 text-left text-sm font-medium">User</th><th className="px-4 py-2 text-left text-sm font-medium">Role</th><th className="px-4 py-2 text-left text-sm font-medium">Joined</th></tr></thead>
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-4 py-2 text-left text-sm font-medium">User</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium">Role</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium">Joined</th>
+                      <th className="px-4 py-2 text-right text-sm font-medium">Actions</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {members.map(m => (
                       <tr key={m.id} className="border-b">
-                        <td className="px-4 py-2 text-sm">{m.user_id.slice(0, 8)}...</td>
+                        <td className="px-4 py-2 text-sm">
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {m.profile?.display_name || `${m.user_id.slice(0, 8)}...`}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{m.user_id}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-2">
                           <select value={m.role} onChange={e => handleRoleChange(m.id, e.target.value)} className="rounded border px-2 py-1 text-sm">
                             <option value="admin">Admin</option>
@@ -226,10 +355,61 @@ export default function SettingsPage() {
                           </select>
                         </td>
                         <td className="px-4 py-2 text-sm text-muted-foreground">{new Date(m.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-2 text-right">
+                          <button
+                            onClick={() => handleRemoveMember(m.id)}
+                            disabled={currentUserId === m.user_id}
+                            className="text-sm font-medium text-red-500 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-6">
+                <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Pending Invitations</h3>
+                <div className="rounded-lg border">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="px-4 py-2 text-left text-sm font-medium">Email</th>
+                        <th className="px-4 py-2 text-left text-sm font-medium">Role</th>
+                        <th className="px-4 py-2 text-left text-sm font-medium">Expires</th>
+                        <th className="px-4 py-2 text-right text-sm font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invitations.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted-foreground">
+                            No pending invitations
+                          </td>
+                        </tr>
+                      ) : (
+                        invitations.map(invite => (
+                          <tr key={invite.id} className="border-b">
+                            <td className="px-4 py-2 text-sm">{invite.email}</td>
+                            <td className="px-4 py-2 text-sm capitalize">{invite.role}</td>
+                            <td className="px-4 py-2 text-sm text-muted-foreground">{new Date(invite.expires_at).toLocaleDateString()}</td>
+                            <td className="px-4 py-2 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button onClick={() => handleResendInvite(invite.id)} className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                                  Resend
+                                </button>
+                                <button onClick={() => handleRevokeInvite(invite.id)} className="text-sm font-medium text-red-500 hover:text-red-700">
+                                  Revoke
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
