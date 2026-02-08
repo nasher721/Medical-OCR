@@ -10,26 +10,39 @@ export async function GET(request: NextRequest) {
 
   const status = searchParams.get('status');
   const search = searchParams.get('search');
-  const docType = searchParams.get('doc_type');
+  const fullText = searchParams.get('full_text') || search;
+  const docTypeParam = searchParams.get('doc_type');
+  const docTypes = docTypeParam ? docTypeParam.split(',').filter(Boolean) : [];
+  const modelId = searchParams.get('model_id');
+  const uploaderId = searchParams.get('uploader_id');
+  const confidenceMin = searchParams.get('confidence_min');
+  const confidenceMax = searchParams.get('confidence_max');
+  const dateFrom = searchParams.get('date_from');
+  const dateTo = searchParams.get('date_to');
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '20');
-  const offset = (page - 1) * limit;
 
-  let query = supabase
-    .from('documents')
-    .select('*', { count: 'exact' })
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (status) query = query.eq('status', status);
-  if (docType) query = query.eq('doc_type', docType);
-  if (search) query = query.ilike('filename', `%${search}%`);
-
-  const { data, error, count } = await query;
+  const { data, error } = await supabase.rpc('search_documents', {
+    p_org_id: orgId,
+    p_status: status || null,
+    p_doc_types: docTypes.length > 0 ? docTypes : null,
+    p_model_id: modelId || null,
+    p_uploader_id: uploaderId || null,
+    p_confidence_min: confidenceMin ? Number(confidenceMin) : null,
+    p_confidence_max: confidenceMax ? Number(confidenceMax) : null,
+    p_date_from: dateFrom || null,
+    p_date_to: dateTo || null,
+    p_full_text: fullText || null,
+    p_page: page,
+    p_page_size: limit,
+  });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data, total: count, page, limit });
+
+  const total = data?.[0]?.total_count ?? 0;
+  const documents = (data || []).map(({ total_count, ...doc }) => doc);
+
+  return NextResponse.json({ data: documents, total, page, limit });
 }
 
 export async function POST(request: NextRequest) {

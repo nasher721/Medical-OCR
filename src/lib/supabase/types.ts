@@ -198,6 +198,16 @@ export interface ReviewComment {
   created_at: string;
 }
 
+export interface FilterPreset {
+  id: string;
+  org_id: string;
+  user_id: string;
+  name: string;
+  filters: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WebhookReceipt {
   id: string;
   org_id: string;
@@ -229,6 +239,7 @@ export interface Database {
       api_keys: { Row: ApiKey; Insert: Partial<ApiKey> & { org_id: string; name: string; key_hash: string }; Update: Partial<ApiKey> };
       audit_logs: { Row: AuditLog; Insert: Partial<AuditLog> & { org_id: string; action: string; entity_type: string }; Update: Partial<AuditLog> };
       review_comments: { Row: ReviewComment; Insert: Partial<ReviewComment> & { org_id: string; document_id: string; user_id: string; body: string }; Update: Partial<ReviewComment> };
+      filter_presets: { Row: FilterPreset; Insert: Partial<FilterPreset> & { org_id: string; user_id: string; name: string }; Update: Partial<FilterPreset> };
       webhook_receipts: { Row: WebhookReceipt; Insert: Partial<WebhookReceipt> & { org_id: string; payload: Record<string, unknown> }; Update: Partial<WebhookReceipt> };
     };
   };
