@@ -179,6 +179,17 @@ export interface ApiKey {
   last_used_at: string | null;
 }
 
+export interface Invitation {
+  id: string;
+  org_id: string;
+  email: string;
+  role: OrgRole;
+  token_hash: string;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+}
+
 export interface AuditLog {
   id: string;
   org_id: string;
@@ -238,6 +249,7 @@ export interface Database {
       integrations: { Row: Integration; Insert: Partial<Integration> & { org_id: string; type: string; name: string }; Update: Partial<Integration> };
       notification_preferences: { Row: NotificationPreference; Insert: Partial<NotificationPreference> & { org_id: string; user_id: string; email: string }; Update: Partial<NotificationPreference> };
       api_keys: { Row: ApiKey; Insert: Partial<ApiKey> & { org_id: string; name: string; key_hash: string }; Update: Partial<ApiKey> };
+      invitations: { Row: Invitation; Insert: Partial<Invitation> & { org_id: string; email: string; token_hash: string; expires_at: string }; Update: Partial<Invitation> };
       audit_logs: { Row: AuditLog; Insert: Partial<AuditLog> & { org_id: string; action: string; entity_type: string }; Update: Partial<AuditLog> };
       review_comments: { Row: ReviewComment; Insert: Partial<ReviewComment> & { org_id: string; document_id: string; user_id: string; body: string }; Update: Partial<ReviewComment> };
       filter_presets: { Row: FilterPreset; Insert: Partial<FilterPreset> & { org_id: string; user_id: string; name: string }; Update: Partial<FilterPreset> };
