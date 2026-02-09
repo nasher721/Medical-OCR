@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { dispatchWebhooks } from '@/lib/webhook-dispatcher';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient();
@@ -43,6 +44,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     entity_id: documentId,
     details: { reason },
   });
+
+  // Dispatch webhooks
+  await dispatchWebhooks(supabase, doc.org_id, 'document.rejected', { document: doc, reason });
 
   return NextResponse.json({ status: 'rejected' });
 }

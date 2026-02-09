@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { dispatchWebhooks } from '@/lib/webhook-dispatcher';
 
 export async function POST(_request: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient();
@@ -68,6 +69,9 @@ export async function POST(_request: NextRequest, { params }: { params: { id: st
     entity_type: 'document',
     entity_id: documentId,
   });
+
+  // Dispatch webhooks
+  await dispatchWebhooks(supabase, doc.org_id, 'document.approved', { document: doc });
 
   return NextResponse.json({ status: 'approved' });
 }

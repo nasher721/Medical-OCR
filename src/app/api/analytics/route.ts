@@ -4,92 +4,91 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient();
   const { searchParams } = new URL(request.url);
-  const orgId = searchParams.get('org_id');
+  const type = searchParams.get('type');
+  const org_id = searchParams.get('org_id');
+  const range = searchParams.get('range') || '30d'; // 30 days default
 
-  if (!orgId) return NextResponse.json({ error: 'org_id required' }, { status: 400 });
+  if (!org_id) {
+    return NextResponse.json({ error: 'Org ID required' }, { status: 400 });
+  }
 
-  // Total documents
-  const { count: totalDocs } = await supabase
-    .from('documents')
-    .select('*', { count: 'exact', head: true })
-    .eq('org_id', orgId);
+  if (type === 'throughput') {
+    // Group documents by created_at date (simple daily count)
+    const { data, error } = await supabase
+      .from('documents')
+      .select('created_at')
+      .eq('org_id', org_id)
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: true });
 
-  // Status breakdown
-  const { data: allDocsRaw } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('org_id', orgId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const allDocs = (allDocsRaw || []) as Array<{ status: string; created_at: string; updated_at: string }>;
+    // Aggregate in memory for now (Supabase/PostgREST grouping is limited without RPC)
+    const counts: Record<string, number> = {};
+    data?.forEach(doc => {
+      const date = new Date(doc.created_at).toISOString().split('T')[0];
+      counts[date] = (counts[date] || 0) + 1;
+    });
 
-  const statusCounts: Record<string, number> = {};
-  const docsPerDay: Record<string, number> = {};
-  let reviewedCount = 0;
-  let totalReviewTimeMs = 0;
-  let autoApprovedCount = 0;
-
-  allDocs.forEach(doc => {
-    statusCounts[doc.status] = (statusCounts[doc.status] || 0) + 1;
-
-    const day = doc.created_at.split('T')[0];
-    docsPerDay[day] = (docsPerDay[day] || 0) + 1;
-
-    if (doc.status === 'approved' && doc.updated_at && doc.created_at) {
-      const reviewTime = new Date(doc.updated_at).getTime() - new Date(doc.created_at).getTime();
-      if (reviewTime < 5000) {
-        autoApprovedCount++;
-      } else {
-        reviewedCount++;
-        totalReviewTimeMs += reviewTime;
-      }
+    // Fill in gaps
+    const result = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const dateStr = d.toISOString().split('T')[0];
+      result.push({
+        date: dateStr,
+        count: counts[dateStr] || 0
+      });
     }
-  });
 
-  const totalProcessed = (totalDocs || 0);
-  const stpRate = totalProcessed > 0
-    ? ((autoApprovedCount / totalProcessed) * 100).toFixed(1)
-    : '0';
-  const avgReviewTime = reviewedCount > 0
-    ? Math.round(totalReviewTimeMs / reviewedCount / 1000)
-    : 0;
+    return NextResponse.json({ data: result });
+  }
 
-  // Edit rate per field
-  const { data: editedFieldsRaw } = await supabase
-    .from('extraction_fields')
-    .select('*')
-    .not('edited_by', 'is', null);
+  if (type === 'performance') {
+    // Get document status distribution
+    const { data, error } = await supabase
+      .from('documents')
+      .select('status')
+      .eq('org_id', org_id);
 
-  const editedFields = (editedFieldsRaw || []) as Array<{ key: string }>;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const { count: totalFields } = await supabase
-    .from('extraction_fields')
-    .select('*', { count: 'exact', head: true });
+    const statusCounts: Record<string, number> = {};
+    data?.forEach(doc => {
+      statusCounts[doc.status] = (statusCounts[doc.status] || 0) + 1;
+    });
 
-  const editRate = (totalFields && totalFields > 0)
-    ? ((editedFields.length / totalFields) * 100).toFixed(1)
-    : '0';
+    const result = Object.entries(statusCounts).map(([status, count]) => ({
+      name: status,
+      value: count
+    }));
 
-  // Field-level edit rates
-  const fieldEditCounts: Record<string, number> = {};
-  editedFields.forEach(f => {
-    fieldEditCounts[f.key] = (fieldEditCounts[f.key] || 0) + 1;
-  });
+    return NextResponse.json({ data: result });
+  }
 
-  // Documents per day (last 30 days)
-  const last30Days = Object.entries(docsPerDay)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-30)
-    .map(([date, count]) => ({ date, count }));
+  if (type === 'activity') {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('actor_id, action, profiles(display_name)')
+      .eq('org_id', org_id)
+      .in('action', ['document.approved', 'document.rejected', 'document.uploaded']);
 
-  return NextResponse.json({
-    total_documents: totalDocs || 0,
-    status_breakdown: statusCounts,
-    stp_rate: parseFloat(stpRate),
-    avg_review_time_seconds: avgReviewTime,
-    edit_rate: parseFloat(editRate),
-    field_edit_counts: fieldEditCounts,
-    documents_per_day: last30Days,
-    pending_review: statusCounts['needs_review'] || 0,
-    active_workflows: 0,
-  });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const activity: Record<string, number> = {};
+    data?.forEach(log => {
+      // @ts-ignore
+      const name = log.profiles?.display_name || 'Unknown';
+      activity[name] = (activity[name] || 0) + 1;
+    });
+
+    const result = Object.entries(activity)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Top 5
+
+    return NextResponse.json({ data: result });
+  }
+
+  return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
 }

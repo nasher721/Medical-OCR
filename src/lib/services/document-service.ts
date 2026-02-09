@@ -23,6 +23,20 @@ export interface SearchDocumentsResponse {
 }
 
 export class DocumentService {
+    static async get(id: string): Promise<{
+        document: Document;
+        extraction: any;
+        fields: any[];
+        comments: any[];
+    }> {
+        const response = await fetch(`/api/documents/${id}`);
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to fetch document');
+        }
+        return response.json();
+    }
+
     static async search(params: SearchDocumentsParams): Promise<SearchDocumentsResponse> {
         const searchParams = new URLSearchParams();
 
@@ -87,5 +101,20 @@ export class DocumentService {
 
         const result = await response.json();
         return result.data;
+    }
+
+    static async bulkAction(action: 'approve' | 'reject' | 'delete', documentIds: string[]): Promise<{ updated: number }> {
+        const response = await fetch('/api/documents/bulk-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, document_ids: documentIds }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to perform bulk action');
+        }
+
+        return response.json();
     }
 }

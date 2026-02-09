@@ -1,15 +1,14 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { AuditLogViewer } from '@/components/settings/audit-log-viewer';
 import { useOrgStore } from '@/lib/hooks/use-org';
-import type { Membership, AuditLog, ApiKey, Invitation } from '@/lib/supabase/types';
-import { Settings, Users, Key, FileText, Copy, Trash2, Plus, ChevronLeft, ChevronRight, Mail } from 'lucide-react';
+import { RoleGuard, hasRole } from '@/components/auth/role-guard';
+import { useEffect, useState } from 'react';
+
+// ... other imports
 
 export default function SettingsPage() {
   const supabase = createClient();
-  const { currentOrg } = useOrgStore();
-  const [activeTab, setActiveTab] = useState<'org' | 'users' | 'api_keys' | 'audit_logs' | 'notifications'>('org');
+  const { currentOrg, role } = useOrgStore();
+  const [activeTab, setActiveTab] = useState<'org' | 'users' | 'api_keys' | 'audit_logs' | 'notifications'>('notifications');
   const [orgName, setOrgName] = useState('');
   const [saving, setSaving] = useState(false);
   const [notificationSaving, setNotificationSaving] = useState(false);
@@ -29,11 +28,6 @@ export default function SettingsPage() {
   const [newKeyName, setNewKeyName] = useState('');
   const [newRawKey, setNewRawKey] = useState<string | null>(null);
 
-  // Audit Logs
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [auditPage, setAuditPage] = useState(1);
-  const [auditTotal, setAuditTotal] = useState(0);
-
   // Notification preferences
   const [notificationPrefId, setNotificationPrefId] = useState<string | null>(null);
   const [notificationEmail, setNotificationEmail] = useState('');
@@ -47,12 +41,21 @@ export default function SettingsPage() {
     fetchMembers();
     fetchInvitations();
     fetchApiKeys();
-    fetchAuditLogs();
     fetchNotificationPreferences();
-    void supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+    void supabase.auth.getUser().then(({ data }: { data: any }) => setCurrentUserId(data.user?.id ?? null));
   }, [currentOrg]);
 
+  // Set default tab based on role
+  useEffect(() => {
+    if (role && !hasRole(role, 'admin') && activeTab !== 'notifications') {
+      setActiveTab('notifications');
+    } else if (role && hasRole(role, 'admin') && activeTab === 'notifications') {
+      setActiveTab('org');
+    }
+  }, [role]);
+
   const fetchMembers = async () => {
+    // ... existing logic
     if (!currentOrg) return;
     const { data: memberData } = await supabase.from('memberships').select('*').eq('org_id', currentOrg.id);
     const memberList = memberData || [];
@@ -91,14 +94,6 @@ export default function SettingsPage() {
     if (resp.ok) { const data = await resp.json(); setApiKeys(data.data || []); }
   };
 
-  const fetchAuditLogs = async () => {
-    if (!currentOrg) return;
-    const resp = await fetch(`/api/audit-logs?org_id=${currentOrg.id}&page=${auditPage}&limit=20`);
-    if (resp.ok) { const data = await resp.json(); setAuditLogs(data.data || []); setAuditTotal(data.total || 0); }
-  };
-
-  useEffect(() => { if (currentOrg && activeTab === 'audit_logs') fetchAuditLogs(); }, [auditPage]);
-
   const fetchNotificationPreferences = async () => {
     if (!currentOrg) return;
     const { data: authData } = await supabase.auth.getUser();
@@ -127,6 +122,8 @@ export default function SettingsPage() {
       setNotifyWorkflowError(true);
     }
   };
+
+  // ... handler functions (handleSaveNotifications, handleSaveOrg, handleCreateKey, handleDeleteKey, handleRoleChange, handleRemoveMember, handleInvite, handleResendInvite, handleRevokeInvite)
 
   const handleSaveNotifications = async () => {
     if (!currentOrg) return;
@@ -235,6 +232,11 @@ export default function SettingsPage() {
     { id: 'notifications' as const, label: 'Notifications', icon: Mail },
   ];
 
+  const visibleTabs = tabs.filter(tab => {
+    if (tab.id === 'notifications') return true;
+    return hasRole(role, 'admin');
+  });
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">Settings</h1>
@@ -242,13 +244,12 @@ export default function SettingsPage() {
       <div className="flex gap-6">
         {/* Sidebar tabs */}
         <div className="w-48 space-y-1">
-          {tabs.map(tab => (
+          {visibleTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'
-              }`}
+              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'
+                }`}
             >
               <tab.icon className="h-4 w-4" />
               {tab.label}
@@ -467,33 +468,8 @@ export default function SettingsPage() {
           )}
 
           {/* Audit Logs */}
-          {activeTab === 'audit_logs' && (
-            <div>
-              <h2 className="mb-4 text-lg font-semibold">Audit Logs</h2>
-              <div className="rounded-lg border">
-                <table className="w-full">
-                  <thead><tr className="border-b bg-muted/50"><th className="px-4 py-2 text-left text-sm font-medium">Action</th><th className="px-4 py-2 text-left text-sm font-medium">Entity</th><th className="px-4 py-2 text-left text-sm font-medium">Timestamp</th></tr></thead>
-                  <tbody>
-                    {auditLogs.length === 0 ? (
-                      <tr><td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">No audit logs</td></tr>
-                    ) : auditLogs.map(log => (
-                      <tr key={log.id} className="border-b">
-                        <td className="px-4 py-2 text-sm font-medium">{log.action.replace(/_/g, ' ')}</td>
-                        <td className="px-4 py-2 text-sm text-muted-foreground">{log.entity_type} {log.entity_id?.slice(0, 8)}</td>
-                        <td className="px-4 py-2 text-sm text-muted-foreground">{new Date(log.created_at).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {Math.ceil(auditTotal / 20) > 1 && (
-                  <div className="flex items-center justify-between border-t px-4 py-2">
-                    <button onClick={() => setAuditPage(p => Math.max(1, p - 1))} disabled={auditPage === 1} className="rounded p-1.5 hover:bg-muted disabled:opacity-50"><ChevronLeft className="h-4 w-4" /></button>
-                    <span className="text-sm">{auditPage} / {Math.ceil(auditTotal / 20)}</span>
-                    <button onClick={() => setAuditPage(p => p + 1)} disabled={auditPage >= Math.ceil(auditTotal / 20)} className="rounded p-1.5 hover:bg-muted disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button>
-                  </div>
-                )}
-              </div>
-            </div>
+          {activeTab === 'audit_logs' && currentOrg && (
+            <AuditLogViewer orgId={currentOrg.id} />
           )}
 
           {/* Notifications */}
