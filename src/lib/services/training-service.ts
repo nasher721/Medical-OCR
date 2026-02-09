@@ -33,7 +33,8 @@ export class TrainingService {
         return response.json();
     }
 
-    static async getMetrics(modelId: string): Promise<TrainingMetrics> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    static async getMetrics(_modelId: string): Promise<TrainingMetrics> {
         // Mock metrics for now as real calculation would happen in Python backend
         // In a real app, this would fetch from an API
         return new Promise(resolve => {

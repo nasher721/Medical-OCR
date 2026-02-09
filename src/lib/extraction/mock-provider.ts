@@ -73,7 +73,8 @@ function generateInvoiceFields(filename: string): { fields: ExtractedField[]; te
 
   // Generate plausible bounding boxes (normalized 0-1 coordinates)
   let yPos = 0.08;
-  const bboxFor = (page: number = 1) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const bboxFor = (_page: number = 1) => {
     const x = 0.1 + rand() * 0.15;
     const y = yPos;
     yPos += 0.04 + rand() * 0.03;
@@ -151,8 +152,8 @@ export class MockExtractionProvider implements ExtractionProvider {
     await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
 
     const isInvoice = document.filename.toLowerCase().includes('invoice') ||
-                      document.filename.toLowerCase().includes('inv_') ||
-                      document.filename.toLowerCase().includes('bill');
+      document.filename.toLowerCase().includes('inv_') ||
+      document.filename.toLowerCase().includes('bill');
 
     const { fields, text } = isInvoice
       ? generateInvoiceFields(document.filename)

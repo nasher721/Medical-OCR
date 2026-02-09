@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CommentService } from '@/lib/services/comment-service';
 import { ReviewComment } from '@/lib/supabase/types';
 import { formatDistanceToNow } from 'date-fns';
-import { Send, User as UserIcon, MessageSquare } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Send, MessageSquare } from 'lucide-react';
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface CommentWithUser extends ReviewComment {
@@ -24,15 +24,7 @@ export function CommentPanel({ documentId, orgId }: CommentPanelProps) {
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        if (documentId) {
-            fetchComments();
-        } else {
-            setComments([]);
-        }
-    }, [documentId]);
-
-    const fetchComments = async () => {
+    const fetchComments = useCallback(async () => {
         if (!documentId) return;
         setLoading(true);
         try {
@@ -43,7 +35,15 @@ export function CommentPanel({ documentId, orgId }: CommentPanelProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [documentId]);
+
+    useEffect(() => {
+        if (documentId) {
+            fetchComments();
+        } else {
+            setComments([]);
+        }
+    }, [documentId, fetchComments]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

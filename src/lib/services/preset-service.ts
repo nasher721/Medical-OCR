@@ -7,7 +7,7 @@ export class PresetService {
         return (await response.json()).data;
     }
 
-    static async create(orgId: string, name: string, filters: Record<string, any>): Promise<FilterPreset> {
+    static async create(orgId: string, name: string, filters: Record<string, unknown>): Promise<FilterPreset> {
         const response = await fetch('/api/presets', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

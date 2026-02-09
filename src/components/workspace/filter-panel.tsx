@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SearchDocumentsParams } from '@/lib/services/document-service';
 import { PresetService } from '@/lib/services/preset-service';
 import { FilterPreset } from '@/lib/supabase/types';
@@ -19,25 +19,25 @@ export function FilterPanel({ orgId, onApply, activeFilters, className }: Filter
     const [presetName, setPresetName] = useState('');
     const [showSave, setShowSave] = useState(false);
 
-    useEffect(() => {
-        if (isOpen && orgId) {
-            loadPresets();
-        }
-    }, [isOpen, orgId]);
-
     // specific effect to update local state if parent changes (e.g. clear all)
     useEffect(() => {
         setLocalFilters(activeFilters);
     }, [activeFilters]);
 
-    const loadPresets = async () => {
+    const loadPresets = useCallback(async () => {
         try {
             const data = await PresetService.list(orgId);
             setPresets(data);
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [orgId]);
+
+    useEffect(() => {
+        if (isOpen && orgId) {
+            loadPresets();
+        }
+    }, [isOpen, orgId, loadPresets]);
 
     const handleApply = () => {
         onApply(localFilters);

@@ -1,9 +1,12 @@
+"use client";
+
 import { AuditLogViewer } from '@/components/settings/audit-log-viewer';
 import { useOrgStore } from '@/lib/hooks/use-org';
 import { RoleGuard, hasRole } from '@/components/auth/role-guard';
 import { useEffect, useState } from 'react';
-
-// ... other imports
+import { createClient } from '@/lib/supabase/client';
+import { Settings, Users, Key, FileText, Mail, Plus, Copy, Trash2 } from 'lucide-react';
+import { Membership, Invitation, ApiKey } from '@/lib/supabase/types';
 
 export default function SettingsPage() {
   const supabase = createClient();
@@ -55,7 +58,6 @@ export default function SettingsPage() {
   }, [role]);
 
   const fetchMembers = async () => {
-    // ... existing logic
     if (!currentOrg) return;
     const { data: memberData } = await supabase.from('memberships').select('*').eq('org_id', currentOrg.id);
     const memberList = memberData || [];
@@ -122,8 +124,6 @@ export default function SettingsPage() {
       setNotifyWorkflowError(true);
     }
   };
-
-  // ... handler functions (handleSaveNotifications, handleSaveOrg, handleCreateKey, handleDeleteKey, handleRoleChange, handleRemoveMember, handleInvite, handleResendInvite, handleRevokeInvite)
 
   const handleSaveNotifications = async () => {
     if (!currentOrg) return;

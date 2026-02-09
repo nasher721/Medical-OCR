@@ -130,7 +130,7 @@ export class WorkflowExecutor {
           status: 'failed',
           message: errMsg,
         });
-        await this.sendWorkflowErrorNotification(ctx, errMsg);
+        await this.sendWorkflowErrorNotification(ctx);
         finalStatus = 'failed';
         break;
       }
@@ -640,7 +640,7 @@ export class WorkflowExecutor {
       this.supabase.from('documents').select('filename').eq('id', ctx.document_id).single(),
     ]);
 
-    const { subject, html, text } = renderNotificationEmail(event, {
+    const { subject, html, text } = await renderNotificationEmail(event, {
       orgName: org?.name,
       documentId: ctx.document_id,
       documentName: doc?.filename,
@@ -696,7 +696,7 @@ export class WorkflowExecutor {
       .filter(Boolean);
   }
 
-  private async sendWorkflowErrorNotification(ctx: WorkflowExecutionContext, _errorMessage?: string): Promise<void> {
+  private async sendWorkflowErrorNotification(ctx: WorkflowExecutionContext): Promise<void> {
     try {
       await this.executeNotify({ notify_event: 'workflow_error' }, ctx);
     } catch {

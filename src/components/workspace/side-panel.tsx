@@ -3,12 +3,12 @@ import { ValidationPanel } from './validation-panel';
 import { CommentPanel } from './comment-panel';
 import { CheckSquare, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 interface SidePanelProps {
     documentId: string | null;
     orgId: string;
-    onApprove: (id: string, data: any) => Promise<void>;
+    onApprove: (id: string, data: Record<string, unknown>) => Promise<void>;
     onReject: (id: string) => Promise<void>;
 }
 

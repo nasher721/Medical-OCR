@@ -11,14 +11,14 @@ import { hasRole } from '@/components/auth/role-guard';
 
 interface ValidationPanelProps {
     documentId: string | null;
-    onApprove: (id: string, data: any) => Promise<void>;
+    onApprove: (id: string, data: Record<string, unknown>) => Promise<void>;
     onReject: (id: string) => Promise<void>;
 }
 
 export function ValidationPanel({ documentId, onApprove, onReject }: ValidationPanelProps) {
     const [fields, setFields] = useState<ExtractionField[]>([]);
     const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
+    const [saving] = useState(false);
     const { role } = useOrgStore();
 
     useKeyboardShortcuts([
@@ -39,25 +39,25 @@ export function ValidationPanel({ documentId, onApprove, onReject }: ValidationP
     ]);
 
     useEffect(() => {
+        const fetchDocumentData = async () => {
+            if (!documentId) return;
+            setLoading(true);
+            try {
+                const data = await DocumentService.get(documentId);
+                setFields((data.fields || []) as unknown as ExtractionField[]);
+            } catch (error) {
+                console.error('Failed to fetch document fields', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (documentId) {
             fetchDocumentData();
         } else {
             setFields([]);
         }
     }, [documentId]);
-
-    const fetchDocumentData = async () => {
-        if (!documentId) return;
-        setLoading(true);
-        try {
-            const data = await DocumentService.get(documentId);
-            setFields(data.fields || []);
-        } catch (error) {
-            console.error('Failed to fetch document fields', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (!documentId) {
         return <div className="w-full bg-background p-4 text-center text-muted-foreground flex flex-col items-center justify-center h-full">

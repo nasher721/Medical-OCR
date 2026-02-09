@@ -25,9 +25,9 @@ export interface SearchDocumentsResponse {
 export class DocumentService {
     static async get(id: string): Promise<{
         document: Document;
-        extraction: any;
-        fields: any[];
-        comments: any[];
+        extraction: Record<string, unknown>;
+        fields: Record<string, unknown>[];
+        comments: Record<string, unknown>[];
     }> {
         const response = await fetch(`/api/documents/${id}`);
         if (!response.ok) {
@@ -66,10 +66,8 @@ export class DocumentService {
         return response.json();
     }
 
-    static async upload(
-        file: File,
-        metadata: { org_id: string; doc_type: string; model_id?: string }
-    ): Promise<Document> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    static async upload(_file: File, _metadata?: Record<string, unknown>): Promise<Document> {
         // 1. Upload to Storage is handled by UI/Component for progress tracking usually, 
         // but if we move it here we need to handle progress.
         // For now, we will stick to the API record creation which is relevant to the service.
@@ -80,18 +78,11 @@ export class DocumentService {
         throw new Error("Use createRecord instead");
     }
 
-    static async createRecord(data: {
-        org_id: string;
-        filename: string;
-        storage_path: string;
-        mime_type: string;
-        doc_type: string;
-        model_id?: string;
-    }): Promise<Document> {
+    static async create(_file: File, metadata: Record<string, unknown>): Promise<Document> {
         const response = await fetch('/api/documents', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: JSON.stringify(metadata),
         });
 
         if (!response.ok) {

@@ -11,10 +11,10 @@ const SUBJECTS: Record<NotificationEventType, string> = {
   workflow_error: 'Workflow error',
 };
 
-export function renderNotificationEmail(
+export async function renderNotificationEmail(
   event: NotificationEventType,
   data: NotificationEmailData
-): { subject: string; html: string; text: string } {
+): Promise<{ subject: string; html: string; text: string }> {
   const subjectBase = SUBJECTS[event];
   const subject = data.documentName ? `${subjectBase}: ${data.documentName}` : subjectBase;
 
@@ -31,8 +31,8 @@ export function renderNotificationEmail(
     }
   })();
 
-  const html = render(template);
-  const text = render(template, { plainText: true });
+  const html = await render(template);
+  const text = await render(template, { plainText: true });
 
   return { subject, html, text };
 }

@@ -1,14 +1,14 @@
 'use client';
 
 import { Document, Extraction } from '@/lib/supabase/types';
-import { Loader2 } from 'lucide-react';
+
 
 interface DocumentViewerProps {
     document: Document | null;
     extraction: Extraction | null;
 }
 
-export function DocumentViewer({ document, extraction }: DocumentViewerProps) {
+export function DocumentViewer({ document }: DocumentViewerProps) {
     if (!document) {
         return (
             <div className="flex h-full flex-1 items-center justify-center bg-muted/5">

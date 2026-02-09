@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useOrgStore } from '@/lib/hooks/use-org';
@@ -37,7 +37,7 @@ type FilterPresetPayload = {
   date_to: string;
 };
 
-export default function DocumentsPage() {
+function DocumentsContent() {
   const { currentOrg } = useOrgStore();
   const supabase = createClient();
   const router = useRouter();
@@ -748,5 +748,13 @@ export default function DocumentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DocumentsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+      <DocumentsContent />
+    </Suspense>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AuditLog } from '@/lib/supabase/types';
 import { AuditService } from '@/lib/services/audit-service';
 import { ChevronLeft, ChevronRight, FileJson } from 'lucide-react';
@@ -19,9 +19,9 @@ export function AuditLogViewer({ orgId }: AuditLogViewerProps) {
         if (orgId) {
             fetchLogs();
         }
-    }, [orgId, page]);
+    }, [orgId, page, fetchLogs]);
 
-    const fetchLogs = async () => {
+    const fetchLogs = useCallback(async () => {
         setLoading(true);
         try {
             const response = await AuditService.getLogs({ org_id: orgId, page, limit });
@@ -32,7 +32,7 @@ export function AuditLogViewer({ orgId }: AuditLogViewerProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [orgId, page]);
 
     const maxPage = Math.ceil(total / limit);
 

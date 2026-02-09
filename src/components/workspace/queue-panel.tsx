@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Document } from '@/lib/supabase/types';
 import { DocumentService, SearchDocumentsParams } from '@/lib/services/document-service';
-import { FileText, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { FilterPanel } from './filter-panel';
@@ -27,7 +27,7 @@ export function QueuePanel({ orgId, selectedId, onSelect, onRefresh }: QueuePane
         page: 1
     });
 
-    const fetchQueue = async () => {
+    const fetchQueue = useCallback(async () => {
         setLoading(true);
         try {
             const response = await DocumentService.search({
@@ -42,13 +42,13 @@ export function QueuePanel({ orgId, selectedId, onSelect, onRefresh }: QueuePane
         } finally {
             setLoading(false);
         }
-    };
+    }, [orgId, filters]);
 
     useEffect(() => {
         if (orgId) {
             fetchQueue();
         }
-    }, [orgId, filters]);
+    }, [orgId, fetchQueue]);
 
     const handleFilterChange = (newFilters: Partial<SearchDocumentsParams>) => {
         setFilters(prev => ({ ...prev, ...newFilters, page: 1 }));
