@@ -15,12 +15,6 @@ export function AuditLogViewer({ orgId }: AuditLogViewerProps) {
     const [loading, setLoading] = useState(false);
     const limit = 20;
 
-    useEffect(() => {
-        if (orgId) {
-            fetchLogs();
-        }
-    }, [orgId, page, fetchLogs]);
-
     const fetchLogs = useCallback(async () => {
         setLoading(true);
         try {
@@ -33,6 +27,12 @@ export function AuditLogViewer({ orgId }: AuditLogViewerProps) {
             setLoading(false);
         }
     }, [orgId, page]);
+
+    useEffect(() => {
+        if (orgId) {
+            fetchLogs();
+        }
+    }, [orgId, page, fetchLogs]);
 
     const maxPage = Math.ceil(total / limit);
 
