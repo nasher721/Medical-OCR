@@ -127,10 +127,10 @@ function DocumentsContent() {
     setDocTypeFilters(docTypesFromQuery);
     setUploaderFilter(searchParams.get('uploader_id') ?? '');
     setModelFilter(searchParams.get('model_id') ?? '');
-    const minParam = Number(searchParams.get('confidence_min'));
-    const maxParam = Number(searchParams.get('confidence_max'));
-    setConfidenceMin(Number.isNaN(minParam) ? 0 : minParam);
-    setConfidenceMax(Number.isNaN(maxParam) ? 1 : maxParam);
+    const minParamStr = searchParams.get('confidence_min');
+    const maxParamStr = searchParams.get('confidence_max');
+    setConfidenceMin(minParamStr !== null ? Number(minParamStr) : 0);
+    setConfidenceMax(maxParamStr !== null ? Number(maxParamStr) : 1);
     setDateFrom(searchParams.get('date_from') ?? '');
     setDateTo(searchParams.get('date_to') ?? '');
     const pageParam = Number(searchParams.get('page') || '1');
