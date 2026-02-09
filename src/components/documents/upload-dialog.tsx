@@ -37,6 +37,8 @@ export function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
     if (!currentOrg || files.length === 0) return;
     setUploading(true);
 
+    const uploadErrors: string[] = [];
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const docId = uuidv4();
@@ -48,11 +50,14 @@ export function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
         .upload(storagePath, file);
 
       if (uploadError) {
-        setProgress(`Error uploading ${file.name}: ${uploadError.message}`);
+        const errorMsg = `Error uploading ${file.name}: ${uploadError.message}`;
+        setProgress(errorMsg);
+        uploadErrors.push(errorMsg);
+        console.error('Storage upload error:', uploadError);
         continue;
       }
 
-      // Create document record
+      setProgress(`Creating document record for ${file.name}...`);
       const resp = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,21 +73,34 @@ export function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
       if (resp.ok) {
         const { data: doc } = await resp.json();
         setProgress(`Processing ${file.name}...`);
-        // Auto-trigger extraction
-        await fetch(`/api/documents/${doc.id}/process`, { method: 'POST' });
+        const processResp = await fetch(`/api/documents/${doc.id}/process`, { method: 'POST' });
+        if (!processResp.ok) {
+          const processErr = await processResp.json();
+          const errorMsg = `Processing failed for ${file.name}: ${processErr.error || 'Unknown error'}`;
+          console.error('Processing error:', processErr);
+          uploadErrors.push(errorMsg);
+        }
       } else {
         const err = await resp.json();
-        setProgress(`Failed to save ${file.name}: ${err.error || 'Unknown error'}`);
-        console.error('Upload failed:', err);
-        // Don't close dialog if error occurred
-        continue;
+        const errorMsg = `Failed to save ${file.name}: ${err.error || 'Unknown error'}`;
+        setProgress(errorMsg);
+        console.error('Document creation error:', err);
+        uploadErrors.push(errorMsg);
       }
     }
 
     setUploading(false);
     setFiles([]);
     setProgress('');
-    onUploaded();
+    
+    if (uploadErrors.length === 0 || uploadErrors.length < files.length) {
+      onUploaded();
+    }
+    
+    if (uploadErrors.length > 0) {
+      alert(`Some uploads failed:\n${uploadErrors.slice(0, 3).join('\n')}${uploadErrors.length > 3 ? '\n...' : ''}`);
+    }
+    
     onClose();
   };
 

@@ -40,16 +40,14 @@ export class DocumentService {
     static async search(params: SearchDocumentsParams): Promise<SearchDocumentsResponse> {
         const searchParams = new URLSearchParams();
 
-        // Required
         searchParams.set('org_id', params.org_id);
 
-        // Optional
         if (params.status) searchParams.set('status', params.status);
         if (params.doc_type?.length) searchParams.set('doc_type', params.doc_type.join(','));
         if (params.model_id) searchParams.set('model_id', params.model_id);
         if (params.uploader_id) searchParams.set('uploader_id', params.uploader_id);
-        if (params.confidence_min !== undefined) searchParams.set('confidence_min', params.confidence_min.toString());
-        if (params.confidence_max !== undefined) searchParams.set('confidence_max', params.confidence_max.toString());
+        if (params.confidence_min !== undefined && params.confidence_min !== null) searchParams.set('confidence_min', params.confidence_min.toString());
+        if (params.confidence_max !== undefined && params.confidence_max !== null) searchParams.set('confidence_max', params.confidence_max.toString());
         if (params.date_from) searchParams.set('date_from', params.date_from);
         if (params.date_to) searchParams.set('date_to', params.date_to);
         if (params.full_text) searchParams.set('full_text', params.full_text);

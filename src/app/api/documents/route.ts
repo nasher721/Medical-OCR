@@ -22,17 +22,9 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '20');
 
-  /*
   console.log('[GET Documents] Params:', {
     orgId, status, docTypes, modelId, dateFrom, dateTo, limit, page, confidenceMin, confidenceMax, uploaderId, fullText
   });
-  */
-
-  /*
-  console.log('[GET Documents] Params:', {
-    orgId, status, docTypes, modelId, dateFrom, dateTo, limit, page, confidenceMin, confidenceMax, uploaderId, fullText
-  });
-  */
 
   const { data, error } = await supabase.rpc('search_documents', {
     p_org_id: orgId,
@@ -45,8 +37,8 @@ export async function GET(request: NextRequest) {
     p_date_from: dateFrom || null,
     p_date_to: dateTo || null,
     p_full_text: fullText || null,
-    p_page: page,        // Correct parameter name
-    p_page_size: limit,  // Correct parameter name
+    p_page: page,
+    p_page_size: limit,
   });
 
   if (error) {
@@ -56,6 +48,8 @@ export async function GET(request: NextRequest) {
 
   const total = (data?.[0] as any)?.total_count ?? 0;
   const documents = (data || []).map(({ total_count, ...doc }: any) => doc);
+
+  console.log('[GET Documents] Result:', { documentCount: documents.length, total, page });
 
   return NextResponse.json({ data: documents, total, page, limit });
 }
