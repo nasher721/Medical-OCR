@@ -280,8 +280,16 @@ export interface FilterPreset {
   user_id: string;
   name: string;
   filters: Record<string, unknown>;
+  tags: string[];
   created_at: string;
   updated_at: string;
+}
+
+export interface FilterPresetTag {
+  id: string;
+  filter_preset_id: string;
+  tag: string;
+  created_at: string;
 }
 
 export interface WebhookReceipt {

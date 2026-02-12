@@ -7,7 +7,7 @@ import { useOrgStore } from '@/lib/hooks/use-org';
 import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@/components/documents/status-badge';
 import { UploadDialog } from '@/components/documents/upload-dialog';
-import type { Document, DocumentStatus, FilterPreset, Model } from '@/lib/supabase/types';
+import type { Document, DocumentStatus, FilterPreset, FilterPresetPayload, Model } from '@/lib/supabase/types';
 import { DocumentService } from '@/lib/services/document-service';
 import { FileText, Upload, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -24,6 +24,8 @@ type UploaderOption = {
   id: string;
   label: string;
 };
+
+
 
 type FilterPresetPayload = {
   full_text: string;
@@ -65,6 +67,7 @@ function DocumentsContent() {
   const [models, setModels] = useState<Pick<Model, 'id' | 'name'>[]>([]);
   const [uploaders, setUploaders] = useState<UploaderOption[]>([]);
   const [presets, setPresets] = useState<FilterPreset[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [presetName, setPresetName] = useState('');
   const [activePresetId, setActivePresetId] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
@@ -540,6 +543,16 @@ function DocumentsContent() {
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
+            </div>
+            <div className="mb-3 block text-xs font-medium text-muted-foreground">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Tags</label>
+              <input
+                type="text"
+                placeholder="Enter tags (comma separated)"
+                value={tags.join(', ')}
+                onChange={(e) => setTags(e.target.value.split(', '))}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 pl-10 text-sm"
+              />
             </div>
 
             <div className="lg:col-span-2">

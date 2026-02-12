@@ -25,8 +25,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     const supabase = createServerSupabaseClient();
     const body = await request.json();
-    const { org_id, name, filters } = body;
-
+    const { org_id, name, filters, tags } = body;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -37,6 +36,7 @@ export async function POST(request: NextRequest) {
             user_id: user.id,
             name,
             filters,
+            tags: tags || [],
         })
         .select()
         .single();
