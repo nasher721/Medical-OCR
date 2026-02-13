@@ -7,7 +7,7 @@ import { useOrgStore } from '@/lib/hooks/use-org';
 import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@/components/documents/status-badge';
 import { UploadDialog } from '@/components/documents/upload-dialog';
-import type { Document, DocumentStatus, FilterPreset, FilterPresetPayload, Model } from '@/lib/supabase/types';
+import type { Document, DocumentStatus, FilterPreset, Model } from '@/lib/supabase/types';
 import { DocumentService } from '@/lib/services/document-service';
 import { FileText, Upload, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 

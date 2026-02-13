@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
     const supabase = createServerSupabaseClient();
@@ -21,8 +21,13 @@ export async function POST(request: NextRequest) {
 
     const org_id = user.id;
 
-    let snapshot_before: any = null;
-    let snapshot_after: any = null;
+    // Track results and snapshots
+    const results: any[] = [];
+    const snapshots_before: any[] = [];
+    const snapshots_after: any[] = [];
+
+    // Generate operation ID
+    const operationId = uuidv4();
 
     try {
         if (action === 'undo') {
@@ -40,98 +45,105 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'No completed operation found to undo' }, { status: 404 });
             }
 
-            const { document_ids: before_snapshot } = history.document_ids as string[];
-            const targetStatus = (history.before_snapshot as any).status;
+            // This logic assumes before_snapshot in history contains status info we can revert to.
+            // Using loose typing to access properties
+            const targetStatus = (history.before_snapshot as any)?.status || 'processing';
 
             for (const docId of document_ids) {
                 const { data: doc } = await supabase.from('documents').select('*').eq('id', docId).single();
 
                 if (!doc) continue;
 
-                snapshot_before = {
+                snapshots_before.push({
                     id: doc.id,
                     status: doc.status,
                     updated_at: doc.updated_at,
-                };
+                });
 
-                if (targetStatus === 'approved' || targetStatus === 'rejected') {
+                if (targetStatus) {
                     await supabase.from('documents').update({ status: targetStatus }).eq('id', docId);
-                    snapshot_after = { id: doc.id, status: targetStatus, updated_at: new Date().toISOString() };
-                } else if (targetStatus === 'processing') {
-                    await supabase.from('documents').update({ status: 'processing' }).eq('id', docId);
-                    snapshot_after = { id: doc.id, status: 'processing', updated_at: new Date().toISOString() };
+                    const afterSnapshot = { id: doc.id, status: targetStatus, updated_at: new Date().toISOString() };
+                    snapshots_after.push(afterSnapshot);
+                    results.push({ id: doc.id, status: 'success', data: afterSnapshot });
                 }
             }
 
-            const operationId = uuidv4();
             await supabase.from('bulk_operation_history').insert({
+                id: operationId,
                 org_id,
                 user_id: user.id,
                 action: 'undo',
                 document_ids,
-                before_snapshot: snapshot_before,
-                after_snapshot: snapshot_after,
+                before_snapshot: snapshots_before.length === 1 ? snapshots_before[0] : snapshots_before,
+                after_snapshot: snapshots_after.length === 1 ? snapshots_after[0] : snapshots_after,
                 status: 'completed',
                 created_at: new Date().toISOString(),
             });
 
-            return NextResponse.json({ document_ids, operation_id });
+            return NextResponse.json({ results, operation_id: operationId });
         } else {
             for (const docId of document_ids) {
                 const { data: doc } = await supabase.from('documents').select('*').eq('id', docId).single();
 
                 if (!doc) continue;
 
-                snapshot_before = {
+                snapshots_before.push({
                     id: doc.id,
                     status: doc.status,
                     updated_at: doc.updated_at,
-                };
+                });
+
+                let afterSnapshot: any = null;
 
                 switch (action) {
                     case 'approve':
                         await supabase.from('documents').update({ status: 'approved' }).eq('id', docId);
-                        snapshot_after = { id: doc.id, status: 'approved', updated_at: new Date().toISOString() };
+                        afterSnapshot = { id: doc.id, status: 'approved', updated_at: new Date().toISOString() };
                         break;
                     case 'reject':
                         await supabase.from('documents').update({ status: 'rejected' }).eq('id', docId);
-                        snapshot_after = { id: doc.id, status: 'rejected', updated_at: new Date().toISOString() };
+                        afterSnapshot = { id: doc.id, status: 'rejected', updated_at: new Date().toISOString() };
                         break;
                     case 'reprocess':
                         await supabase.from('documents').update({ status: 'processing' }).eq('id', docId);
-                        snapshot_after = { id: doc.id, status: 'processing', updated_at: new Date().toISOString() };
 
+                        // Async process trigger
                         const processResp = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/documents/${docId}/process`, { method: 'POST' });
                         if (processResp.ok) {
                             const processData = await processResp.json();
-                            snapshot_after = { id: doc.id, status: processData.status, updated_at: new Date().toISOString() };
+                            afterSnapshot = { id: doc.id, status: processData.status || 'processing', updated_at: new Date().toISOString() };
                         } else {
-                            snapshot_after = { id: doc.id, status: 'process_failed' };
+                            afterSnapshot = { id: doc.id, status: 'process_failed' };
                         }
                         break;
                     case 'delete':
                         await supabase.from('documents').delete().eq('id', docId);
-                        snapshot_after = { id: doc.id, status: 'deleted', updated_at: new Date().toISOString() };
+                        afterSnapshot = { id: doc.id, status: 'deleted', updated_at: new Date().toISOString() };
                         break;
+                }
+
+                if (afterSnapshot) {
+                    snapshots_after.push(afterSnapshot);
+                    results.push({ id: doc.id, status: 'success', data: afterSnapshot });
                 }
             }
 
-            const operationId = uuidv4();
             await supabase.from('bulk_operation_history').insert({
+                id: operationId,
                 org_id,
                 user_id: user.id,
                 action,
                 document_ids,
-                before_snapshot: snapshot_before,
-                after_snapshot: snapshot_after,
+                before_snapshot: snapshots_before.length === 1 ? snapshots_before[0] : snapshots_before,
+                after_snapshot: snapshots_after.length === 1 ? snapshots_after[0] : snapshots_after,
                 status: 'completed',
                 created_at: new Date().toISOString(),
             });
 
-            return NextResponse.json({ results, operation_id });
+            return NextResponse.json({ results, operation_id: operationId });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error('Bulk action error:', error);
-        return NextResponse.json({ error: error.message, results, operation_id, status: 'failed' }, { status: 500 });
+        return NextResponse.json({ error: error.message, results, operation_id: operationId, status: 'failed' }, { status: 500 });
     }
 }
