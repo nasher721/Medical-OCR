@@ -19,7 +19,14 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const org_id = user.id;
+    // Get org_id from the first document being acted on
+    const { data: firstDoc } = await supabase
+        .from('documents')
+        .select('org_id')
+        .eq('id', document_ids[0])
+        .single();
+    
+    const org_id = firstDoc?.org_id;
 
     // Track results and snapshots
     const results: any[] = [];

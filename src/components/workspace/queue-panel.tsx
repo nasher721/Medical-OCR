@@ -20,9 +20,8 @@ export function QueuePanel({ orgId, selectedId, onSelect, onRefresh }: QueuePane
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
-    // Default filters
     const [filters, setFilters] = useState<Partial<SearchDocumentsParams>>({
-        status: 'uploaded',
+        status: 'needs_review',
         limit: 50,
         page: 1
     });
@@ -115,7 +114,7 @@ export function QueuePanel({ orgId, selectedId, onSelect, onRefresh }: QueuePane
                         <CheckCircle className="mb-2 h-8 w-8 opacity-20" />
                         <p className="text-xs">No documents found.</p>
                         {Object.keys(filters).length > 3 && (
-                            <button onClick={() => handleFilterChange({ status: 'uploaded', date_from: undefined, date_to: undefined, doc_type: undefined })} className="mt-2 text-xs text-primary underline">
+                            <button onClick={() => handleFilterChange({ status: 'needs_review', date_from: undefined, date_to: undefined, doc_type: undefined })} className="mt-2 text-xs text-primary underline">
                                 Clear filters
                             </button>
                         )}
