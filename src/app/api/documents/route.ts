@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { triggerDocumentProcessing } from '@/lib/workflow-engine';
 
 export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient();
@@ -110,6 +111,14 @@ export async function POST(request: NextRequest) {
     entity_id: data.id,
     details: { filename },
   });
+
+  // Trigger processing workflow
+  try {
+    await triggerDocumentProcessing(supabase, data.id, org_id, doc_type || 'invoice');
+  } catch (error) {
+    console.error('[Upload] Failed to trigger workflow:', error);
+    // Non-blocking error for the upload itself, but good to log
+  }
 
   return NextResponse.json({ data });
 }

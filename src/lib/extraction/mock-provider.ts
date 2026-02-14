@@ -146,6 +146,45 @@ function generateGenericFields(filename: string): { fields: ExtractedField[]; te
   };
 }
 
+function generateMockTokens(text: string): { text: string; bbox: { x: number; y: number; w: number; h: number }; page: number; line_number: number; block_number: number }[] {
+  const tokens: { text: string; bbox: { x: number; y: number; w: number; h: number }; page: number; line_number: number; block_number: number }[] = [];
+  const lines = text.split('\n');
+  let y = 0.05;
+  let blockNum = 1;
+
+  lines.forEach((line, lineIndex) => {
+    if (!line.trim()) {
+      y += 0.02; // Gap for empty line
+      blockNum++;
+      return;
+    }
+
+    const words = line.split(/\s+/).filter(w => w.length > 0);
+    let x = 0.1;
+    const height = 0.015;
+
+    words.forEach(word => {
+      const width = word.length * 0.01;
+      tokens.push({
+        text: word,
+        bbox: {
+          x: parseFloat(x.toFixed(3)),
+          y: parseFloat(y.toFixed(3)),
+          w: parseFloat(width.toFixed(3)),
+          h: parseFloat(height.toFixed(3))
+        },
+        page: 1,
+        line_number: lineIndex + 1,
+        block_number: blockNum,
+      });
+      x += width + 0.01; // Space
+    });
+    y += 0.025; // Line height
+  });
+
+  return tokens;
+}
+
 export class MockExtractionProvider implements ExtractionProvider {
   async extract(document: { filename: string; content?: ArrayBuffer; mime_type: string }): Promise<ExtractionResult> {
     // Simulate processing delay
@@ -173,6 +212,7 @@ export class MockExtractionProvider implements ExtractionProvider {
         page: 1,
         bbox: { x: 0.08, y: 0.35, w: 0.84, h: 0.25 },
       }] : undefined,
+      tokens: generateMockTokens(text),
     };
   }
 }

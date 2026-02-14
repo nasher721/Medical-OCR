@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   FileText,
   Clock,
   CheckCircle2,
   GitBranch,
   ArrowUpRight,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -22,12 +24,12 @@ interface KpiData {
 }
 
 const statusColors: Record<DocumentStatus, string> = {
-  uploaded: "bg-blue-100 text-blue-700",
-  processing: "bg-yellow-100 text-yellow-700",
-  needs_review: "bg-orange-100 text-orange-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-  exported: "bg-purple-100 text-purple-700",
+  uploaded: "bg-blue-500/15 text-blue-400",
+  processing: "bg-amber-500/15 text-amber-400",
+  needs_review: "bg-orange-500/15 text-orange-400",
+  approved: "bg-emerald-500/15 text-emerald-400",
+  rejected: "bg-red-500/15 text-red-400",
+  exported: "bg-purple-500/15 text-purple-400",
 };
 
 export default function DashboardPage() {
@@ -50,34 +52,29 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       const supabase = createClient();
 
-      // Fetch total documents
       const { count: totalDocuments } = await supabase
         .from("documents")
         .select("*", { count: "exact", head: true })
         .eq("org_id", currentOrg!.id);
 
-      // Fetch pending review count
       const { count: pendingReview } = await supabase
         .from("documents")
         .select("*", { count: "exact", head: true })
         .eq("org_id", currentOrg!.id)
         .eq("status", "needs_review");
 
-      // Fetch approved count for rate calculation
       const { count: approvedCount } = await supabase
         .from("documents")
         .select("*", { count: "exact", head: true })
         .eq("org_id", currentOrg!.id)
         .eq("status", "approved");
 
-      // Fetch active workflows
       const { count: activeWorkflows } = await supabase
         .from("workflows")
         .select("*", { count: "exact", head: true })
         .eq("org_id", currentOrg!.id)
         .eq("is_active", true);
 
-      // Fetch recent documents (last 5)
       const { data: recent } = await supabase
         .from("documents")
         .select("*")
@@ -114,84 +111,103 @@ export default function DashboardPage() {
       label: "Total Documents",
       value: kpis.totalDocuments,
       icon: FileText,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      gradient: "from-blue-500 to-cyan-500",
+      glow: "shadow-blue-500/20",
     },
     {
       label: "Pending Review",
       value: kpis.pendingReview,
       icon: Clock,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
+      gradient: "from-amber-500 to-orange-500",
+      glow: "shadow-amber-500/20",
     },
     {
       label: "Auto-Approved Rate",
       value: `${kpis.autoApprovedRate}%`,
       icon: CheckCircle2,
-      color: "text-green-600",
-      bg: "bg-green-50",
+      gradient: "from-emerald-500 to-teal-500",
+      glow: "shadow-emerald-500/20",
     },
     {
       label: "Active Workflows",
       value: kpis.activeWorkflows,
       icon: GitBranch,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
+      gradient: "from-purple-500 to-pink-500",
+      glow: "shadow-purple-500/20",
     },
   ];
 
   if (orgLoading || loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-64 animate-pulse rounded-lg bg-muted" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-6 animate-fade-in">
+        <div className="h-8 w-64 shimmer rounded-lg" />
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-32 animate-pulse rounded-xl border bg-card"
+              className="h-36 shimmer rounded-2xl border border-white/[0.06]"
             />
           ))}
         </div>
-        <div className="h-64 animate-pulse rounded-xl border bg-card" />
+        <div className="h-64 shimmer rounded-2xl border border-white/[0.06]" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div>
+      <div className="animate-slide-up">
         <h1 className="text-2xl font-bold text-foreground">
-          Welcome back{profile?.display_name ? `, ${profile.display_name}` : ""}
+          Welcome back
+          {profile?.display_name ? (
+            <span className="gradient-text">{`, ${profile.display_name}`}</span>
+          ) : (
+            ""
+          )}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1.5 text-sm text-muted-foreground">
           Here&apos;s an overview of your document processing pipeline.
         </p>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpiCards.map((card) => {
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {kpiCards.map((card, index) => {
           const Icon = card.icon;
           return (
             <div
               key={card.label}
-              className="rounded-xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
+              className={cn(
+                "group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-card/60 p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg",
+                card.glow,
+                index === 0 && "animate-slide-up",
+                index === 1 && "animate-slide-up-delay-1",
+                index === 2 && "animate-slide-up-delay-2",
+                index === 3 && "animate-slide-up-delay-3"
+              )}
             >
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">
+              {/* Gradient orb background */}
+              <div className={cn(
+                "absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br opacity-10 blur-2xl transition-opacity duration-300 group-hover:opacity-20",
+                card.gradient
+              )} />
+
+              <div className="relative flex items-center justify-between">
+                <p className="text-[13px] font-medium text-muted-foreground">
                   {card.label}
                 </p>
                 <div
                   className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg",
-                    card.bg
+                    "flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br shadow-lg",
+                    card.gradient,
+                    card.glow
                   )}
                 >
-                  <Icon className={cn("h-4 w-4", card.color)} />
+                  <Icon className="h-[18px] w-[18px] text-white" />
                 </div>
               </div>
-              <p className="mt-3 text-3xl font-bold text-foreground">
+              <p className="relative mt-4 text-3xl font-bold tracking-tight text-foreground">
                 {card.value}
               </p>
             </div>
@@ -200,42 +216,51 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Documents */}
-      <div className="rounded-xl border bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            Recent Documents
-          </h2>
-          <a
+      <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-card/60 shadow-sm backdrop-blur-sm animate-slide-up-delay-2">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">
+              Recent Documents
+            </h2>
+          </div>
+          <Link
             href="/app/documents"
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium text-primary transition-colors hover:bg-primary/10"
           >
             View all
             <ArrowUpRight className="h-3.5 w-3.5" />
-          </a>
+          </Link>
         </div>
 
         {recentDocs.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <FileText className="mx-auto h-10 w-10 text-muted-foreground/40" />
-            <p className="mt-3 text-sm text-muted-foreground">
-              No documents yet. Upload your first document to get started.
+          <div className="px-6 py-16 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50">
+              <FileText className="h-7 w-7 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">
+              No documents yet
+            </p>
+            <p className="mt-1 text-[13px] text-muted-foreground/70">
+              Upload your first document to get started.
             </p>
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y divide-white/[0.04]">
             {recentDocs.map((doc) => (
-              <div
+              <Link
                 key={doc.id}
-                className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/50"
+                href={`/app/documents/${doc.id}`}
+                className="flex items-center gap-4 px-6 py-4 transition-colors duration-150 hover:bg-accent/50"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
+                  <p className="truncate text-[13px] font-medium text-foreground">
                     {doc.filename}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     {new Date(doc.created_at).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
@@ -247,13 +272,13 @@ export default function DashboardPage() {
                 </div>
                 <span
                   className={cn(
-                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
-                    statusColors[doc.status] || "bg-gray-100 text-gray-700"
+                    "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
+                    statusColors[doc.status] || "bg-gray-500/15 text-gray-400"
                   )}
                 >
                   {doc.status.replace("_", " ")}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         )}

@@ -7,3 +7,4 @@ export type {
   WorkflowExecutionContext,
   StepResult
 } from './types';
+export { triggerDocumentProcessing } from './trigger';

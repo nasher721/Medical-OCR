@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Building2,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOrg } from "@/lib/hooks/use-org";
@@ -69,7 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -77,25 +78,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Sidebar */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card transition-transform duration-200 lg:static lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/[0.06] bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-out lg:static lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
           {/* Org header */}
-          <div className="flex h-16 items-center gap-3 border-b px-5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
-              {currentOrg?.name?.[0]?.toUpperCase() || "M"}
+          <div className="flex h-16 items-center gap-3 border-b border-white/[0.06] px-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-primary text-xs font-bold text-white shadow-lg shadow-primary/25">
+              <Sparkles className="h-4 w-4" />
             </div>
             <div className="flex-1 truncate">
               <p className="truncate text-sm font-semibold text-foreground">
                 {orgLoading ? "Loading..." : currentOrg?.name || "Medical OCR"}
               </p>
-              <p className="text-xs text-muted-foreground">Organization</p>
+              <p className="text-[11px] text-muted-foreground">Organization</p>
             </div>
             {/* Mobile close */}
             <button
               onClick={() => setSidebarOpen(false)}
-              className="rounded-md p-1 text-muted-foreground hover:text-foreground lg:hidden"
+              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
             >
               <X className="h-5 w-5" />
             </button>
@@ -103,7 +104,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto px-3 py-4">
-            <ul className="space-y-1">
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+              Navigation
+            </p>
+            <ul className="space-y-0.5">
               {navItems.map((item) => {
                 const isActive =
                   pathname === item.href ||
@@ -117,18 +121,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
                       className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200",
                         isActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          ? "bg-primary/15 text-primary shadow-sm shadow-primary/10"
+                          : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
                       )}
                     >
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
+                      )}
                       <Icon
                         className={cn(
-                          "h-4 w-4 shrink-0",
+                          "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
                           isActive
                             ? "text-primary"
-                            : "text-muted-foreground group-hover:text-foreground"
+                            : "text-muted-foreground/70 group-hover:text-foreground"
                         )}
                       />
                       {item.label}
@@ -141,34 +148,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           {/* User section */}
-          <div className="border-t p-3">
+          <div className="border-t border-white/[0.06] p-3">
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 hover:bg-accent/80"
               >
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={displayName}
-                    className="h-8 w-8 rounded-full object-cover"
+                    className="h-8 w-8 rounded-full object-cover ring-2 ring-primary/20"
                   />
                 ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary text-[11px] font-bold text-white shadow-sm">
                     {initials}
                   </div>
                 )}
                 <div className="flex-1 text-left">
-                  <p className="truncate text-sm font-medium text-foreground">
+                  <p className="truncate text-[13px] font-medium text-foreground">
                     {userLoading ? "Loading..." : displayName}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="truncate text-[11px] text-muted-foreground">
                     {user?.email || ""}
                   </p>
                 </div>
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                    "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
                     userMenuOpen && "rotate-180"
                   )}
                 />
@@ -176,10 +183,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               {/* User dropdown */}
               {userMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-1 w-full rounded-lg border bg-card p-1 shadow-lg">
+                <div className="absolute bottom-full left-0 mb-2 w-full animate-slide-up rounded-xl border border-white/[0.08] bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
                   <button
                     onClick={handleSignOut}
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-muted-foreground transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
                   >
                     <LogOut className="h-4 w-4" />
                     Sign out
@@ -193,15 +200,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Main content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Top bar (mobile) */}
-          <header className="flex h-16 items-center gap-4 border-b bg-card px-4 lg:hidden">
+          <header className="flex h-14 items-center gap-4 border-b border-white/[0.06] bg-card/50 px-4 backdrop-blur-xl lg:hidden">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="rounded-md p-2 text-muted-foreground hover:text-foreground"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-primary">
+                <Sparkles className="h-3.5 w-3.5 text-white" />
+              </div>
               <span className="text-sm font-semibold">
                 {currentOrg?.name || "Medical OCR"}
               </span>

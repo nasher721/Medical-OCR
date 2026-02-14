@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { Sparkles } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,7 +48,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 1. Create user
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -70,7 +70,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 2. Create profile
     const { error: profileError } = await supabase.from("profiles").insert({
       user_id: authData.user.id,
       display_name: displayName || email.split("@")[0],
@@ -82,7 +81,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 3. Create org
     const { data: orgData, error: orgError } = await supabase
       .from("orgs")
       .insert({ name: orgName.trim() })
@@ -95,7 +93,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 4. Create membership with admin role
     const { error: membershipError } = await supabase
       .from("memberships")
       .insert({
@@ -114,42 +111,34 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 px-4">
-      <div className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -left-[40%] -top-[40%] h-[80%] w-[80%] rounded-full bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-transparent blur-3xl animate-gradient-shift" style={{ backgroundSize: '200% 200%' }} />
+        <div className="absolute -bottom-[30%] -right-[30%] h-[70%] w-[70%] rounded-full bg-gradient-to-tl from-cyan-600/15 via-blue-600/10 to-transparent blur-3xl animate-gradient-shift" style={{ backgroundSize: '200% 200%', animationDelay: '4s' }} />
+        <div className="absolute left-1/2 top-1/2 h-[50%] w-[50%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md animate-slide-up">
         {/* Logo / Brand */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-6 w-6"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary shadow-lg shadow-primary/30 animate-float">
+            <Sparkles className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Medical OCR</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-3xl font-bold gradient-text">Medical OCR</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             Intelligent document processing for medical records
           </p>
         </div>
 
         {/* Card */}
-        <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <div className="rounded-2xl border border-white/[0.08] bg-card/70 p-8 shadow-2xl backdrop-blur-xl">
           <h2 className="mb-6 text-lg font-semibold text-card-foreground">
             {isSignUp ? "Create an account" : "Sign in to your account"}
           </h2>
 
           {error && (
-            <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400 animate-fade-in">
               {error}
             </div>
           )}
@@ -163,7 +152,7 @@ export default function LoginPage() {
                 <div>
                   <label
                     htmlFor="displayName"
-                    className="mb-1.5 block text-sm font-medium text-foreground"
+                    className="mb-1.5 block text-[13px] font-medium text-foreground"
                   >
                     Full Name
                   </label>
@@ -172,14 +161,14 @@ export default function LoginPage() {
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="flex h-11 w-full rounded-xl border border-white/[0.08] bg-accent/50 px-4 py-2 text-sm text-foreground ring-offset-background transition-all duration-200 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/30"
                     placeholder="Dr. Jane Smith"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="orgName"
-                    className="mb-1.5 block text-sm font-medium text-foreground"
+                    className="mb-1.5 block text-[13px] font-medium text-foreground"
                   >
                     Organization Name
                   </label>
@@ -189,7 +178,7 @@ export default function LoginPage() {
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
                     required
-                    className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="flex h-11 w-full rounded-xl border border-white/[0.08] bg-accent/50 px-4 py-2 text-sm text-foreground ring-offset-background transition-all duration-200 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/30"
                     placeholder="Acme Medical Group"
                   />
                 </div>
@@ -199,7 +188,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="mb-1.5 block text-sm font-medium text-foreground"
+                className="mb-1.5 block text-[13px] font-medium text-foreground"
               >
                 Email
               </label>
@@ -209,7 +198,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="flex h-11 w-full rounded-xl border border-white/[0.08] bg-accent/50 px-4 py-2 text-sm text-foreground ring-offset-background transition-all duration-200 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/30"
                 placeholder="you@example.com"
               />
             </div>
@@ -217,7 +206,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-foreground"
+                className="mb-1.5 block text-[13px] font-medium text-foreground"
               >
                 Password
               </label>
@@ -228,7 +217,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="flex h-11 w-full rounded-xl border border-white/[0.08] bg-accent/50 px-4 py-2 text-sm text-foreground ring-offset-background transition-all duration-200 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/30"
                 placeholder="Min. 6 characters"
               />
             </div>
@@ -237,7 +226,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className={cn(
-                "inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                "inline-flex h-11 w-full items-center justify-center rounded-xl bg-gradient-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 ring-offset-background transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
               )}
             >
               {loading
@@ -248,7 +237,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-6 text-center text-[13px] text-muted-foreground">
             {isSignUp ? (
               <>
                 Already have an account?{" "}
@@ -257,7 +246,7 @@ export default function LoginPage() {
                     setIsSignUp(false);
                     setError(null);
                   }}
-                  className="font-medium text-primary hover:underline"
+                  className="font-semibold text-primary transition-colors hover:text-primary/80"
                 >
                   Sign in
                 </button>
@@ -270,7 +259,7 @@ export default function LoginPage() {
                     setIsSignUp(true);
                     setError(null);
                   }}
-                  className="font-medium text-primary hover:underline"
+                  className="font-semibold text-primary transition-colors hover:text-primary/80"
                 >
                   Sign up
                 </button>
@@ -279,7 +268,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
+        <p className="mt-6 text-center text-[11px] text-muted-foreground/60">
           By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>

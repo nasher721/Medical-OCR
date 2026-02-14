@@ -9,7 +9,7 @@ import { StatusBadge } from '@/components/documents/status-badge';
 import { UploadDialog } from '@/components/documents/upload-dialog';
 import type { Document, DocumentStatus, FilterPreset, Model } from '@/lib/supabase/types';
 import { DocumentService } from '@/lib/services/document-service';
-import { FileText, Upload, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Upload, Search, Filter, ChevronLeft, ChevronRight, Sparkles, SlidersHorizontal } from 'lucide-react';
 
 type BulkAction = 'approve' | 'reject' | 'reprocess' | 'delete';
 
@@ -73,8 +73,11 @@ function DocumentsContent() {
   const [userId, setUserId] = useState<string | null>(null);
   const [savingPreset, setSavingPreset] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const selectAllRef = useRef<HTMLInputElement | null>(null);
   const limit = 20;
+
+  const inputClasses = "w-full rounded-xl border border-white/[0.08] bg-accent/50 px-3 py-2.5 text-sm text-foreground transition-all duration-200 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30";
 
   const fetchDocuments = async () => {
     if (!currentOrg) return;
@@ -100,7 +103,6 @@ function DocumentsContent() {
       setTotal(response.total);
     } catch (error) {
       console.error('Error fetching documents:', error);
-      // Optional: Add toast error here if needed, but existing code didn't have much error handling
     } finally {
       setLoading(false);
     }
@@ -222,7 +224,6 @@ function DocumentsContent() {
             .order('created_at', { ascending: false });
           setPresets(presetData || []);
         } catch {
-          // filter_presets table may not exist yet
           setPresets([]);
         }
       } else {
@@ -312,7 +313,6 @@ function DocumentsContent() {
         .order('created_at', { ascending: false });
       setPresets(presetData || []);
     } catch {
-      // filter_presets table may not exist yet
       console.warn('filter_presets table not available');
     }
     setSavingPreset(false);
@@ -388,94 +388,87 @@ function DocumentsContent() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div>
+    <div className="animate-fade-in">
+      {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Documents</h1>
-          <p className="text-sm text-muted-foreground">{total} documents total</p>
+        <div className="animate-slide-up">
+          <h1 className="text-2xl font-bold text-foreground">Documents</h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">{total} documents total</p>
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
         >
           <Upload className="h-4 w-4" />
           Upload Document
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="mb-4 space-y-4">
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px]">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Saved filters</label>
-              <select
-                value={activePresetId}
-                onChange={(e) => handlePresetSelect(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">Select preset</option>
-                {presets.map((preset) => (
-                  <option key={preset.id} value={preset.id}>{preset.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="min-w-[220px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Preset name</label>
-              <input
-                type="text"
-                placeholder="Name this filter set..."
-                value={presetName}
-                onChange={(e) => setPresetName(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-            <button
-              onClick={handleSavePreset}
-              disabled={savingPreset || !presetName.trim()}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {savingPreset ? 'Saving...' : 'Save Preset'}
-            </button>
-            <button
-              onClick={handleClearFilters}
-              className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
+      {/* Search bar */}
+      <div className="mb-4 animate-slide-up-delay-1">
+        <form onSubmit={handleSearch} className="relative">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+          <input
+            type="text"
+            placeholder="Search documents by text, filename..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full rounded-2xl border border-white/[0.06] bg-card/60 py-3 pl-11 pr-24 text-sm backdrop-blur-sm transition-all duration-200 placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/20"
+          />
+          <button
+            type="submit"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-primary/20 px-4 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/30"
+          >
+            Search
+          </button>
+        </form>
+      </div>
 
-        <div className="rounded-lg border bg-card p-4">
-          <div className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Filter className="h-4 w-4" />
-            Filters
+      {/* Filters toggle + presets */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 animate-slide-up-delay-2">
+        <button
+          onClick={() => setFiltersExpanded(!filtersExpanded)}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/[0.06] bg-card/60 px-4 py-2 text-[13px] font-medium text-muted-foreground backdrop-blur-sm transition-all duration-200 hover:bg-accent/80 hover:text-foreground"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {filtersExpanded ? 'Hide Filters' : 'Show Filters'}
+        </button>
+
+        {presets.length > 0 && (
+          <select
+            value={activePresetId}
+            onChange={(e) => handlePresetSelect(e.target.value)}
+            className="rounded-xl border border-white/[0.06] bg-card/60 px-3 py-2 text-[13px] text-muted-foreground backdrop-blur-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="">Saved presets</option>
+            {presets.map((preset) => (
+              <option key={preset.id} value={preset.id}>{preset.name}</option>
+            ))}
+          </select>
+        )}
+
+        <button
+          onClick={handleClearFilters}
+          className="rounded-xl border border-white/[0.06] px-3 py-2 text-[13px] font-medium text-muted-foreground/60 transition-colors hover:bg-accent/60 hover:text-foreground"
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* Expandable filters */}
+      {filtersExpanded && (
+        <div className="mb-5 animate-slide-up rounded-2xl border border-white/[0.06] bg-card/50 p-5 backdrop-blur-sm">
+          <div className="mb-4 flex items-center gap-2 text-[13px] font-semibold text-muted-foreground">
+            <Filter className="h-3.5 w-3.5" />
+            Advanced Filters
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
-            <form onSubmit={handleSearch} className="relative lg:col-span-3">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Full-text search</label>
-              <Search className="absolute left-3 top-[38px] h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search extracted text..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background py-2 pl-10 pr-20 text-sm"
-              />
-              <button
-                type="submit"
-                className="absolute right-2 top-[30px] rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
-              >
-                Search
-              </button>
-            </form>
-
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                className={inputClasses}
               >
                 <option value="">All Status</option>
                 <option value="uploaded">Uploaded</option>
@@ -488,7 +481,7 @@ function DocumentsContent() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Document Types</label>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Document Types</label>
               <select
                 multiple
                 value={docTypeFilters}
@@ -497,7 +490,7 @@ function DocumentsContent() {
                   setDocTypeFilters(selections);
                   setPage(1);
                 }}
-                className="h-24 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                className={`${inputClasses} h-20`}
               >
                 {docTypes.length === 0 && (
                   <option disabled>No document types</option>
@@ -509,11 +502,11 @@ function DocumentsContent() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Uploader</label>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Uploader</label>
               <select
                 value={uploaderFilter}
                 onChange={(e) => { setUploaderFilter(e.target.value); setPage(1); }}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                className={inputClasses}
               >
                 <option value="">All Uploaders</option>
                 {uploaders.map((uploader) => (
@@ -523,11 +516,11 @@ function DocumentsContent() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Model</label>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Model</label>
               <select
                 value={modelFilter}
                 onChange={(e) => { setModelFilter(e.target.value); setPage(1); }}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                className={inputClasses}
               >
                 <option value="">All Models</option>
                 {models.map((model) => (
@@ -537,36 +530,37 @@ function DocumentsContent() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Date range</label>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Date range</label>
               <div className="flex items-center gap-2">
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  className={inputClasses}
                 />
-                <span className="text-xs text-muted-foreground">to</span>
+                <span className="text-[11px] text-muted-foreground/50">to</span>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  className={inputClasses}
                 />
               </div>
             </div>
-            <div className="mb-3 block text-xs font-medium text-muted-foreground">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Tags</label>
+
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Tags</label>
               <input
                 type="text"
                 placeholder="Enter tags (comma separated)"
                 value={tags.join(', ')}
                 onChange={(e) => setTags(e.target.value.split(', '))}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 pl-10 text-sm"
+                className={inputClasses}
               />
             </div>
 
             <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Confidence range</label>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Confidence range</label>
               <div className="flex flex-col gap-2">
                 <input
                   type="range"
@@ -595,20 +589,38 @@ function DocumentsContent() {
                   className="w-full accent-primary"
                 />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-[11px] text-muted-foreground/60">
                 {confidenceMin.toFixed(2)} – {confidenceMax.toFixed(2)}
               </p>
             </div>
+
+            <div className="flex items-end gap-2">
+              <input
+                type="text"
+                placeholder="Preset name..."
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                className={inputClasses}
+              />
+              <button
+                onClick={handleSavePreset}
+                disabled={savingPreset || !presetName.trim()}
+                className="shrink-0 rounded-xl bg-primary/20 px-4 py-2.5 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/30 disabled:opacity-40"
+              >
+                {savingPreset ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
+      {/* Bulk actions */}
       {selectedCount > 0 && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-5 py-3 animate-slide-up">
           <div>
-            <p className="text-sm font-medium">{selectedCount} selected</p>
+            <p className="text-sm font-semibold text-foreground">{selectedCount} selected</p>
             {bulkSubmitting && bulkStatus && (
-              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="inline-flex h-3 w-3 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                 <span>{bulkStatus}</span>
               </div>
@@ -620,12 +632,12 @@ function DocumentsContent() {
                 key={action}
                 onClick={() => setBulkAction(action)}
                 disabled={bulkSubmitting}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${action === 'delete'
-                  ? 'border border-red-200 text-red-600 hover:bg-red-50'
-                  : 'border border-input hover:bg-muted'
+                className={`rounded-xl px-3.5 py-2 text-[13px] font-medium transition-all duration-200 disabled:opacity-50 ${action === 'delete'
+                  ? 'border border-red-500/20 text-red-400 hover:bg-red-500/10'
+                  : 'border border-white/[0.08] text-foreground hover:bg-accent/80'
                   }`}
               >
-                {bulkActionLabels[action]} Selected
+                {bulkActionLabels[action]}
               </button>
             ))}
           </div>
@@ -633,74 +645,78 @@ function DocumentsContent() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border bg-card">
+      <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-card/50 backdrop-blur-sm">
         <table className="w-full">
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="w-10 px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+            <tr className="border-b border-white/[0.06] bg-accent/30">
+              <th className="w-10 px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                 <input
                   ref={selectAllRef}
                   type="checkbox"
                   checked={allSelected}
                   onChange={toggleSelectAll}
                   aria-label="Select all documents"
-                  className="h-4 w-4 rounded border border-input text-primary focus:ring-1 focus:ring-primary"
+                  className="h-4 w-4 rounded border-white/20 bg-transparent text-primary focus:ring-1 focus:ring-primary"
                 />
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Filename</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Type</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Created</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
+              <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Filename</th>
+              <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Type</th>
+              <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Status</th>
+              <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Created</th>
+              <th className="px-4 py-3.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-b">
-                  <td className="px-4 py-3"><div className="h-4 w-4 animate-pulse rounded bg-muted" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-48 animate-pulse rounded bg-muted" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-16 animate-pulse rounded bg-muted" /></td>
-                  <td className="px-4 py-3"><div className="h-5 w-24 animate-pulse rounded bg-muted" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-24 animate-pulse rounded bg-muted" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-16 animate-pulse rounded bg-muted" /></td>
+                <tr key={i} className="border-b border-white/[0.04]">
+                  <td className="px-4 py-4"><div className="h-4 w-4 shimmer rounded" /></td>
+                  <td className="px-4 py-4"><div className="h-4 w-48 shimmer rounded-lg" /></td>
+                  <td className="px-4 py-4"><div className="h-4 w-16 shimmer rounded-lg" /></td>
+                  <td className="px-4 py-4"><div className="h-5 w-24 shimmer rounded-lg" /></td>
+                  <td className="px-4 py-4"><div className="h-4 w-24 shimmer rounded-lg" /></td>
+                  <td className="px-4 py-4"><div className="h-4 w-16 shimmer rounded-lg" /></td>
                 </tr>
               ))
             ) : documents.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center">
-                  <FileText className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+                <td colSpan={6} className="px-4 py-16 text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/30">
+                    <FileText className="h-7 w-7 text-muted-foreground/30" />
+                  </div>
                   <p className="text-sm font-medium text-muted-foreground">No documents found</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Upload your first document to get started</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground/60">Upload your first document to get started</p>
                 </td>
               </tr>
             ) : (
               documents.map((doc) => (
-                <tr key={doc.id} className="border-b hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
+                <tr key={doc.id} className="group border-b border-white/[0.04] transition-colors duration-150 hover:bg-accent/40">
+                  <td className="px-4 py-3.5">
                     <input
                       type="checkbox"
                       checked={selectedIds.has(doc.id)}
                       onChange={() => toggleSelect(doc.id)}
                       aria-label={`Select ${doc.filename}`}
-                      className="h-4 w-4 rounded border border-input text-primary focus:ring-1 focus:ring-primary"
+                      className="h-4 w-4 rounded border-white/20 bg-transparent text-primary focus:ring-1 focus:ring-primary"
                     />
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{doc.filename}</span>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <FileText className="h-4 w-4 text-primary/70" />
+                      </div>
+                      <span className="text-[13px] font-medium text-foreground">{doc.filename}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm capitalize text-muted-foreground">{doc.doc_type}</td>
-                  <td className="px-4 py-3"><StatusBadge status={doc.status as DocumentStatus} /></td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                  <td className="px-4 py-3.5 text-[13px] capitalize text-muted-foreground">{doc.doc_type}</td>
+                  <td className="px-4 py-3.5"><StatusBadge status={doc.status as DocumentStatus} /></td>
+                  <td className="px-4 py-3.5 text-[13px] text-muted-foreground">
                     {new Date(doc.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3.5 text-right">
                     <Link
                       href={`/app/documents/${doc.id}`}
-                      className="rounded-md px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10"
+                      className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-primary transition-all duration-200 hover:bg-primary/10"
                     >
                       View
                     </Link>
@@ -713,23 +729,23 @@ function DocumentsContent() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-4 py-3">
-            <p className="text-sm text-muted-foreground">
-              Showing {(page - 1) * limit + 1}-{Math.min(page * limit, total)} of {total}
+          <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-3">
+            <p className="text-[13px] text-muted-foreground/60">
+              Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded-md p-1.5 hover:bg-muted disabled:opacity-50"
+                className="rounded-lg p-2 transition-colors hover:bg-accent disabled:opacity-30"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-sm">{page} / {totalPages}</span>
+              <span className="min-w-[60px] text-center text-[13px] font-medium text-foreground">{page} / {totalPages}</span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="rounded-md p-1.5 hover:bg-muted disabled:opacity-50"
+                className="rounded-lg p-2 transition-colors hover:bg-accent disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -740,28 +756,29 @@ function DocumentsContent() {
 
       <UploadDialog open={showUpload} onClose={() => setShowUpload(false)} onUploaded={fetchDocuments} />
 
+      {/* Bulk action modal */}
       {bulkAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold">Confirm Bulk Action</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md animate-slide-up rounded-2xl border border-white/[0.08] bg-card p-7 shadow-2xl">
+            <h2 className="text-lg font-bold text-foreground">Confirm Bulk Action</h2>
+            <p className="mt-2 text-[13px] text-muted-foreground">
               You&apos;re about to {bulkSummary.toLowerCase()}. This action will apply to the selected documents.
             </p>
-            <div className="mt-4 rounded-lg border border-dashed px-3 py-2 text-sm">
+            <div className="mt-4 rounded-xl border border-white/[0.06] bg-accent/30 px-4 py-2.5 text-[13px] font-medium text-foreground">
               {bulkSummary}
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => setBulkAction(null)}
                 disabled={bulkSubmitting}
-                className="rounded-lg border px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
+                className="rounded-xl border border-white/[0.08] px-4 py-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleBulkConfirm}
                 disabled={bulkSubmitting}
-                className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-primary hover:bg-primary/90'
+                className={`rounded-xl px-5 py-2.5 text-[13px] font-semibold text-white shadow-lg transition-all duration-200 disabled:opacity-50 ${bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700 shadow-red-900/30' : 'bg-gradient-primary shadow-primary/25 hover:shadow-primary/30'
                   }`}
               >
                 {bulkSubmitting ? 'Working...' : `${bulkActionLabels[bulkAction]} ${selectedCount}`}
@@ -776,7 +793,14 @@ function DocumentsContent() {
 
 export default function DocumentsPage() {
   return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+    <Suspense fallback={
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Sparkles className="h-5 w-5 animate-pulse text-primary" />
+          <span className="text-sm font-medium">Loading documents...</span>
+        </div>
+      </div>
+    }>
       <DocumentsContent />
     </Suspense>
   );

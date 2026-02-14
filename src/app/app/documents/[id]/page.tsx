@@ -15,7 +15,7 @@ import { TableExtractionPanel } from '@/components/annotation/table-extraction-p
 import { ClinicalEntityPanel } from '@/components/annotation/clinical-entity-panel';
 import { extractClinicalEntities } from '@/lib/annotation/clinical-nlp';
 import { extractTableFromTokens } from '@/lib/annotation/table-extraction';
-import { ArrowLeft, FileText, Sparkles, Table2, PenSquare, Eye, Zap } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, Table2, PenSquare, Eye, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function DocumentReviewPage() {
   const params = useParams();
@@ -35,6 +35,8 @@ export default function DocumentReviewPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [tableExtraction, setTableExtraction] = useState<ReturnType<typeof extractTableFromTokens> | null>(null);
   const [activeTab, setActiveTab] = useState<'annotations' | 'schema' | 'suggestions' | 'table' | 'nlp'>('annotations');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [numPages, setNumPages] = useState<number | null>(null);
 
   const fetchDocument = useCallback(async () => {
     setLoading(true);
@@ -304,6 +306,30 @@ export default function DocumentReviewPage() {
               +
             </button>
           </div>
+
+          <div className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+              className="disabled:opacity-50"
+              title="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="tabular-nums">
+              {currentPage} / {numPages || '-'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(numPages || prev, prev + 1))}
+              disabled={!numPages || currentPage >= numPages}
+              className="disabled:opacity-50"
+              title="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
           <button
             type="button"
             onClick={fetchSuggestions}
@@ -329,6 +355,8 @@ export default function DocumentReviewPage() {
             showPhi={showPhi}
             onCreateAnnotation={handleCreateAnnotation}
             onSelectAnnotation={setActiveAnnotationId}
+            pageNumber={currentPage}
+            onLoadSuccess={setNumPages}
           />
         </div>
         <div className="flex w-full max-w-[420px] flex-col overflow-hidden bg-slate-50">
@@ -389,6 +417,6 @@ export default function DocumentReviewPage() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

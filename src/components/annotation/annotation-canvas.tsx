@@ -1,7 +1,17 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import type { Annotation, OcrToken } from '@/lib/supabase/types';
+
+const PdfViewer = dynamic(() => import('./pdf-viewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center p-10">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  ),
+});
 
 export type AnnotationMode = 'select' | 'draw' | 'table' | 'redact';
 
@@ -24,6 +34,8 @@ interface AnnotationCanvasProps {
   zoom: number;
   activeAnnotationId: string | null;
   showPhi: boolean;
+  pageNumber?: number;
+  onLoadSuccess?: (numPages: number) => void;
   onCreateAnnotation: (annotation: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>) => void;
   onSelectAnnotation: (annotationId: string | null) => void;
 }
@@ -66,6 +78,7 @@ const snapBoxToTokens = (box: { x: number; y: number; w: number; h: number }, to
   };
 };
 
+
 export function AnnotationCanvas({
   imageUrl,
   mimeType,
@@ -76,6 +89,8 @@ export function AnnotationCanvas({
   zoom,
   activeAnnotationId,
   showPhi,
+  pageNumber = 1,
+  onLoadSuccess,
   onCreateAnnotation,
   onSelectAnnotation,
 }: AnnotationCanvasProps) {
@@ -83,12 +98,12 @@ export function AnnotationCanvas({
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
 
-  const pageTokens = useMemo(() => tokens.filter((token) => token.page_number === 1), [tokens]);
+  const pageTokens = useMemo(() => tokens.filter((token) => token.page_number === pageNumber), [tokens, pageNumber]);
   const pageSuggestions = useMemo(
-    () => suggestions.filter((suggestion) => suggestion.page_number === 1),
-    [suggestions],
+    () => suggestions.filter((suggestion) => suggestion.page_number === pageNumber),
+    [suggestions, pageNumber],
   );
-  const pageAnnotations = useMemo(() => annotations.filter((annotation) => annotation.page_number === 1), [annotations]);
+  const pageAnnotations = useMemo(() => annotations.filter((annotation) => annotation.page_number === pageNumber), [annotations, pageNumber]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (mode === 'select') return;
@@ -116,7 +131,7 @@ export function AnnotationCanvas({
     const value = tokensInBox.map((token) => token.text).join(' ').trim();
     onCreateAnnotation({
       document_id: '',
-      page_number: 1,
+      page_number: pageNumber,
       field_key: mode === 'table' ? 'Table' : mode === 'redact' ? 'Redaction' : 'Unassigned',
       value,
       bbox: snappedBox,
@@ -127,8 +142,12 @@ export function AnnotationCanvas({
     setDragCurrent(null);
   };
 
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    onLoadSuccess?.(numPages);
+  };
+
   return (
-    <div className="relative h-full w-full overflow-auto bg-slate-100 p-6">
+    <div className="relative h-full w-full overflow-auto bg-slate-100 p-6 flex justify-center">
       {!imageUrl ? (
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
@@ -138,21 +157,27 @@ export function AnnotationCanvas({
         </div>
       ) : (
         <div
-          className="relative mx-auto w-fit rounded-xl bg-white shadow-lg"
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+          className="relative shadow-lg"
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top center',
+            width: 'fit-content'
+          }}
         >
           {mimeType === 'application/pdf' ? (
-            <iframe
-              src={`${imageUrl}#toolbar=0`}
-              title="Document page"
-              className="h-[900px] w-[720px] bg-white"
+            <PdfViewer
+              file={imageUrl}
+              pageNumber={pageNumber}
+              onLoadSuccess={onDocumentLoadSuccess}
             />
           ) : (
             <img src={imageUrl} alt="Document page" className="max-w-[720px]" draggable={false} />
           )}
+
+          {/* Overlay Layer */}
           <div
             ref={wrapperRef}
-            className="absolute inset-0"
+            className="absolute inset-0 z-10"
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -178,13 +203,12 @@ export function AnnotationCanvas({
                   event.stopPropagation();
                   onSelectAnnotation(annotation.id);
                 }}
-                className={`absolute rounded-md border-2 text-left ${
-                  annotation.field_key === 'Redaction'
-                    ? 'border-rose-500 bg-rose-500/30'
-                    : annotation.id === activeAnnotationId
-                      ? 'border-primary bg-primary/15'
-                      : 'border-emerald-400/80 bg-emerald-200/20'
-                }`}
+                className={`absolute rounded-md border-2 text-left ${annotation.field_key === 'Redaction'
+                  ? 'border-rose-500 bg-rose-500/30'
+                  : annotation.id === activeAnnotationId
+                    ? 'border-primary bg-primary/15'
+                    : 'border-emerald-400/80 bg-emerald-200/20'
+                  }`}
                 style={{
                   left: `${annotation.bbox.x * 100}%`,
                   top: `${annotation.bbox.y * 100}%`,

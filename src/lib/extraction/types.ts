@@ -24,6 +24,14 @@ export interface ExtractionResult {
   full_text: string;
   fields: ExtractedField[];
   tables?: ExtractedTable[];
+  tokens?: {
+    text: string;
+    bbox: BoundingBox;
+    page: number;
+    confidence?: number;
+    line_number?: number;
+    block_number?: number;
+  }[];
 }
 
 export interface ExtractionProvider {

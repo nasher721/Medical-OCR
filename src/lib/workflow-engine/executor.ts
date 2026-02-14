@@ -321,6 +321,27 @@ export class WorkflowExecutor {
 
     if (!extraction) return { status: 'failed', message: 'Failed to create extraction' };
 
+    // Store tokens if available
+    if (result.tokens && result.tokens.length > 0) {
+      const tokenInserts = result.tokens.map(t => ({
+        document_id: ctx.document_id,
+        page_number: t.page,
+        text: t.text,
+        bbox: t.bbox,
+        line_number: t.line_number,
+        block_number: t.block_number,
+        confidence: t.confidence ?? 1.0,
+      }));
+
+      // Batch insert tokens to avoid payload limits if large
+      // For now, simpler implementation
+      const { error: tokenError } = await this.supabase.from('ocr_tokens').insert(tokenInserts);
+      if (tokenError) {
+        console.error('Failed to insert tokens:', tokenError);
+        // Don't fail the whole workflow, just log
+      }
+    }
+
     // Store fields
     const fieldInserts = result.fields.map(f => ({
       extraction_id: extraction.id,
