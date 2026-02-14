@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ArrowLeft, FileSearch } from "lucide-react";
+import Link from "next/link";
+import { SpotlightOverlay } from "@/hooks/use-spotlight";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -112,24 +115,78 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      {/* Spotlight cursor effect */}
+      <SpotlightOverlay className="opacity-40" />
+      
       {/* Animated gradient background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -left-[40%] -top-[40%] h-[80%] w-[80%] rounded-full bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-transparent blur-3xl animate-gradient-shift" style={{ backgroundSize: '200% 200%' }} />
         <div className="absolute -bottom-[30%] -right-[30%] h-[70%] w-[70%] rounded-full bg-gradient-to-tl from-cyan-600/15 via-blue-600/10 to-transparent blur-3xl animate-gradient-shift" style={{ backgroundSize: '200% 200%', animationDelay: '4s' }} />
         <div className="absolute left-1/2 top-1/2 h-[50%] w-[50%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-3xl" />
+        
+        {/* Floating particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-2 h-2 rounded-full bg-indigo-500/20"
+              initial={{ 
+                x: `${Math.random() * 100}%`, 
+                y: `${Math.random() * 100}%`,
+                scale: Math.random() * 0.5 + 0.5
+              }}
+              animate={{ 
+                y: [null, `${Math.random() * 100}%`],
+                opacity: [0.2, 0.5, 0.2]
+              }}
+              transition={{ 
+                duration: Math.random() * 10 + 10, 
+                repeat: Infinity,
+                ease: "linear"
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      <div className="relative z-10 w-full max-w-md animate-slide-up">
+      {/* Back to home link */}
+      <Link 
+        href="/"
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Home
+      </Link>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 w-full max-w-md"
+      >
         {/* Logo / Brand */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary shadow-lg shadow-primary/30 animate-float">
-            <Sparkles className="h-7 w-7 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold gradient-text">Medical OCR</h1>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mb-8 text-center"
+        >
+          <motion.div 
+            className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary shadow-lg shadow-primary/30"
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <FileSearch className="h-7 w-7 text-white" />
+          </motion.div>
+          <h1 className="text-3xl font-bold">
+            <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Medical OCR
+            </span>
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Intelligent document processing for medical records
           </p>
-        </div>
+        </motion.div>
 
         {/* Card */}
         <div className="rounded-2xl border border-white/[0.08] bg-card/70 p-8 shadow-2xl backdrop-blur-xl">
@@ -271,7 +328,7 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-[11px] text-muted-foreground/60">
           By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

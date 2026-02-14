@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   FileText,
@@ -25,6 +26,40 @@ import { useUser } from "@/lib/hooks/use-user";
 import { createClient } from "@/lib/supabase/client";
 import { NotificationBadge } from "@/components/notifications/notification-badge";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
+
+const sidebarVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05, delayChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } },
+};
+
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.2 } },
+  exit: { opacity: 0, transition: { duration: 0.15 } },
+};
+
+const sidebarSlideVariants = {
+  hidden: { x: "-100%" },
+  visible: { x: 0, transition: { type: "spring" as const, stiffness: 300, damping: 30 } },
+  exit: { x: "-100%", transition: { duration: 0.2 } },
+};
+
+const navItemVariants = {
+  initial: { opacity: 0, x: -20 },
+  animate: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: { delay: i * 0.05, type: "spring" as const, stiffness: 300, damping: 24 },
+  }),
+};
 
 const navItems = [
   { label: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard },
@@ -67,21 +102,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <NotificationProvider>
       <div className="flex h-screen overflow-hidden bg-background">
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <aside
-          className={cn(
-            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/[0.06] bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-out lg:static lg:translate-x-0",
-            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              key="mobile-overlay"
+              variants={overlayVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
           )}
-        >
+        </AnimatePresence>
+
+        <AnimatePresence mode="wait">
+          <motion.aside
+            key="sidebar"
+            variants={sidebarSlideVariants}
+            initial={sidebarOpen ? "hidden" : false}
+            animate="visible"
+            exit="exit"
+            className={cn(
+              "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/[0.06] bg-card/80 backdrop-blur-xl lg:static lg:translate-x-0",
+              !sidebarOpen && "max-lg:-translate-x-full"
+            )}
+          >
           {/* Org header */}
           <div className="flex h-16 items-center gap-3 border-b border-white/[0.06] px-5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-primary text-xs font-bold text-white shadow-lg shadow-primary/25">
@@ -108,7 +154,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               Navigation
             </p>
             <ul className="space-y-0.5">
-              {navItems.map((item) => {
+              {navItems.map((item, index) => {
                 const isActive =
                   pathname === item.href ||
                   (item.href !== "/app/dashboard" &&
@@ -116,7 +162,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 const Icon = item.icon;
 
                 return (
-                  <li key={item.href}>
+                  <motion.li
+                    key={item.href}
+                    custom={index}
+                    variants={navItemVariants}
+                    initial="initial"
+                    animate="animate"
+                  >
                     <Link
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
@@ -128,20 +180,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       )}
                     >
                       {isActive && (
-                        <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
+                        <motion.div
+                          layoutId="activeIndicator"
+                          className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary"
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        />
                       )}
-                      <Icon
-                        className={cn(
-                          "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
-                          isActive
-                            ? "text-primary"
-                            : "text-muted-foreground/70 group-hover:text-foreground"
-                        )}
-                      />
-                      {item.label}
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                      >
+                        <Icon
+                          className={cn(
+                            "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
+                            isActive
+                              ? "text-primary"
+                              : "text-muted-foreground/70 group-hover:text-foreground"
+                          )}
+                        />
+                      </motion.div>
+                      <motion.span
+                        whileHover={{ x: 2 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                      >
+                        {item.label}
+                      </motion.span>
                       {item.href === "/app/documents" && <NotificationBadge />}
                     </Link>
-                  </li>
+                  </motion.li>
                 );
               })}
             </ul>
@@ -195,7 +261,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               )}
             </div>
           </div>
-        </aside>
+        </motion.aside>
+        </AnimatePresence>
 
         {/* Main content */}
         <div className="flex flex-1 flex-col overflow-hidden">
