@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         .select('org_id')
         .eq('id', document_ids[0])
         .single();
-    
+
     const org_id = firstDoc?.org_id;
 
     // Track results and snapshots
@@ -75,17 +75,21 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            await supabase.from('bulk_operation_history').insert({
-                id: operationId,
-                org_id,
-                user_id: user.id,
-                action: 'undo',
-                document_ids,
-                before_snapshot: snapshots_before.length === 1 ? snapshots_before[0] : snapshots_before,
-                after_snapshot: snapshots_after.length === 1 ? snapshots_after[0] : snapshots_after,
-                status: 'completed',
-                created_at: new Date().toISOString(),
-            });
+            try {
+                await supabase.from('bulk_operation_history').insert({
+                    id: operationId,
+                    org_id,
+                    user_id: user.id,
+                    action: 'undo',
+                    document_ids,
+                    before_snapshot: snapshots_before.length === 1 ? snapshots_before[0] : snapshots_before,
+                    after_snapshot: snapshots_after.length === 1 ? snapshots_after[0] : snapshots_after,
+                    status: 'completed',
+                    created_at: new Date().toISOString(),
+                });
+            } catch {
+                // bulk_operation_history table may not exist
+            }
 
             return NextResponse.json({ results, operation_id: operationId });
         } else {
@@ -135,17 +139,21 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            await supabase.from('bulk_operation_history').insert({
-                id: operationId,
-                org_id,
-                user_id: user.id,
-                action,
-                document_ids,
-                before_snapshot: snapshots_before.length === 1 ? snapshots_before[0] : snapshots_before,
-                after_snapshot: snapshots_after.length === 1 ? snapshots_after[0] : snapshots_after,
-                status: 'completed',
-                created_at: new Date().toISOString(),
-            });
+            try {
+                await supabase.from('bulk_operation_history').insert({
+                    id: operationId,
+                    org_id,
+                    user_id: user.id,
+                    action,
+                    document_ids,
+                    before_snapshot: snapshots_before.length === 1 ? snapshots_before[0] : snapshots_before,
+                    after_snapshot: snapshots_after.length === 1 ? snapshots_after[0] : snapshots_after,
+                    status: 'completed',
+                    created_at: new Date().toISOString(),
+                });
+            } catch {
+                // bulk_operation_history table may not exist
+            }
 
             return NextResponse.json({ results, operation_id: operationId });
         }

@@ -213,13 +213,18 @@ function DocumentsContent() {
       }
 
       if (user?.id) {
-        const { data: presetData } = await supabase
-          .from('filter_presets')
-          .select('*')
-          .eq('org_id', currentOrg.id)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        setPresets(presetData || []);
+        try {
+          const { data: presetData } = await supabase
+            .from('filter_presets')
+            .select('*')
+            .eq('org_id', currentOrg.id)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+          setPresets(presetData || []);
+        } catch {
+          // filter_presets table may not exist yet
+          setPresets([]);
+        }
       } else {
         setPresets([]);
       }
@@ -286,25 +291,30 @@ function DocumentsContent() {
       date_from: dateFrom,
       date_to: dateTo,
     };
-    await supabase
-      .from('filter_presets')
-      .upsert(
-        {
-          org_id: currentOrg.id,
-          user_id: userId,
-          name: presetName.trim(),
-          filters: payload,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,name' }
-      );
-    const { data: presetData } = await supabase
-      .from('filter_presets')
-      .select('*')
-      .eq('org_id', currentOrg.id)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    setPresets(presetData || []);
+    try {
+      await supabase
+        .from('filter_presets')
+        .upsert(
+          {
+            org_id: currentOrg.id,
+            user_id: userId,
+            name: presetName.trim(),
+            filters: payload,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,name' }
+        );
+      const { data: presetData } = await supabase
+        .from('filter_presets')
+        .select('*')
+        .eq('org_id', currentOrg.id)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      setPresets(presetData || []);
+    } catch {
+      // filter_presets table may not exist yet
+      console.warn('filter_presets table not available');
+    }
     setSavingPreset(false);
   };
 

@@ -11,15 +11,23 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data, error } = await supabase
-        .from('filter_presets')
-        .select('*')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+    try {
+        const { data, error } = await supabase
+            .from('filter_presets')
+            .select('*')
+            .eq('org_id', orgId)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ data });
+        if (error) {
+            // Table may not exist — return empty array gracefully
+            console.warn('[Presets] Query error (table may not exist):', error.message);
+            return NextResponse.json({ data: [] });
+        }
+        return NextResponse.json({ data });
+    } catch {
+        return NextResponse.json({ data: [] });
+    }
 }
 
 export async function POST(request: NextRequest) {
@@ -29,20 +37,27 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data, error } = await supabase
-        .from('filter_presets')
-        .insert({
-            org_id,
-            user_id: user.id,
-            name,
-            filters,
-            tags: tags || [],
-        })
-        .select()
-        .single();
+    try {
+        const { data, error } = await supabase
+            .from('filter_presets')
+            .insert({
+                org_id,
+                user_id: user.id,
+                name,
+                filters,
+                tags: tags || [],
+            })
+            .select()
+            .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ data });
+        if (error) {
+            console.warn('[Presets] Insert error:', error.message);
+            return NextResponse.json({ error: 'Filter presets not available. Database migration may be needed.' }, { status: 503 });
+        }
+        return NextResponse.json({ data });
+    } catch {
+        return NextResponse.json({ error: 'Filter presets not available' }, { status: 503 });
+    }
 }
 
 export async function DELETE(request: NextRequest) {
@@ -55,12 +70,19 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-    const { error } = await supabase
-        .from('filter_presets')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id); // Ensure user owns it
+    try {
+        const { error } = await supabase
+            .from('filter_presets')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', user.id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
+        if (error) {
+            console.warn('[Presets] Delete error:', error.message);
+            return NextResponse.json({ error: 'Filter presets not available' }, { status: 503 });
+        }
+        return NextResponse.json({ success: true });
+    } catch {
+        return NextResponse.json({ error: 'Filter presets not available' }, { status: 503 });
+    }
 }
