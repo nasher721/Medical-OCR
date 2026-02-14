@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run; node .github/setup.js",
+    "test": "vitest run; node .github/setup.js; node .github/setup.js",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
